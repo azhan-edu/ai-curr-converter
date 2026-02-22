@@ -53,3 +53,20 @@ export const getExchangeRate = (
 
   return toRate / fromRate;
 };
+
+export const validateAmount = (amount: string): { isValid: boolean; error?: string } => {
+  if (!amount.trim()) {
+    return { isValid: false, error: 'Amount is required' };
+  }
+  const num = parseFloat(amount);
+  if (isNaN(num)) {
+    return { isValid: false, error: 'Please enter a valid number' };
+  }
+  if (num <= 0) {
+    return { isValid: false, error: 'Amount must be greater than 0' };
+  }
+  if (num > 1000000000) {
+    return { isValid: false, error: 'Amount is too large' };
+  }
+  return { isValid: true };
+};
