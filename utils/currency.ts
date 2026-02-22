@@ -10,7 +10,7 @@ export const CURRENCIES: Currency[] = [
   { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF' },
   { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
   { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
-  { code: 'KRW', name: 'South Korean Won', symbol: '₩' },
+  { code: 'PLN', name: 'Polish Zloty', symbol: 'zł' },
 ];
 
 export const formatCurrency = (amount: number, currency: string): string => {

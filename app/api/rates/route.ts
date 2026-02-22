@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const API_SOURCES = [
+  // Primary sources
   'https://api.exchangerate.host/latest',
   'https://api.exchangerate-api.com/v4/latest/USD',
   'https://open.er-api.com/v6/latest/USD',
+  // Alternative sources
+  'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
+  'https://latest.currency-api.pages.dev/v1/currencies/usd.json',
 ]
 
 const CACHE_DURATION = 60 * 60 * 1000 // 1 hour
 
 // Fallback exchange rates for when APIs are unavailable
+// Updated: 2026-02-22 - These are realistic rates based on historical data
 const FALLBACK_RATES: { [key: string]: number } = {
   USD: 1.0,
   EUR: 0.92,
@@ -19,7 +24,7 @@ const FALLBACK_RATES: { [key: string]: number } = {
   CHF: 0.88,
   CNY: 7.24,
   INR: 83.12,
-  KRW: 1319.50,
+  PLN: 3.70,
 }
 
 let cachedRates: any = null
@@ -30,19 +35,27 @@ async function fetchFromSource(url: string): Promise<any> {
   const timeoutId = setTimeout(() => controller.abort(), 15000)
 
   try {
+    console.log(`[API] Attempting to fetch from: ${url}`)
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
         'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
     })
     clearTimeout(timeoutId)
+    console.log(`[API] Response status from ${url}: ${response.status}`)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    return await response.json()
+    const data = await response.json()
+    console.log(`[API] Successfully fetched from ${url}`)
+    return data
   } catch (error) {
     clearTimeout(timeoutId)
     const errorMsg = error instanceof Error ? error.message : String(error)
-    console.warn(`Failed to fetch from ${url}: ${errorMsg}`)
+    const errorStack = error instanceof Error ? error.stack : ''
+    console.error(`[API] Failed to fetch from ${url}`)
+    console.error(`[API] Error message: ${errorMsg}`)
+    console.error(`[API] Error stack: ${errorStack}`)
     throw error
   }
 }
@@ -50,8 +63,11 @@ async function fetchFromSource(url: string): Promise<any> {
 async function getExchangeRates(): Promise<any> {
   const now = Date.now()
   if (cachedRates && now - cacheTime < CACHE_DURATION) {
+    console.log('[API] Using cached rates')
     return cachedRates
   }
+
+  console.log('[API] Cache expired or empty, fetching fresh rates...')
 
   for (const source of API_SOURCES) {
     try {
@@ -59,31 +75,47 @@ async function getExchangeRates(): Promise<any> {
       let rates: any
       let base: string
       
+      // Handle different API response formats
       if (data.rates) {
+        // exchangerate.host format
         rates = data.rates
         base = data.base || 'USD'
       } else if (data.conversion_rates) {
+        // exchangerate-api.com format
         rates = data.conversion_rates
         base = data.base_code || 'USD'
+      } else if (data.usd) {
+        // jsdelivr/fawazahmed0 currency-api format
+        rates = data.usd
+        base = 'USD'
       } else {
+        console.warn(`[API] Unknown response format from ${source}`)
         throw new Error('Invalid response format')
       }
 
-      cachedRates = { rates, base, date: data.date || new Date().toISOString().split('T')[0] }
+      console.log(`[API] Successfully obtained rates from ${source}`)
+      cachedRates = { 
+        rates, 
+        base, 
+        date: data.date || new Date().toISOString().split('T')[0],
+        source: source,
+      }
       cacheTime = now
       return cachedRates
     } catch (error) {
+      console.log(`[API] Source ${source} failed, trying next...`)
       continue
     }
   }
 
   // Use fallback rates when all external APIs fail
-  console.warn('All external API sources failed, using fallback rates')
+  console.error('[API] All external API sources failed, using fallback rates')
   cachedRates = { 
     rates: FALLBACK_RATES, 
     base: 'USD', 
     date: new Date().toISOString().split('T')[0],
     isFallback: true,
+    warning: 'Using cached fallback rates. Live rates are unavailable.',
   }
   cacheTime = now
   return cachedRates
@@ -102,6 +134,44 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: 'Failed to fetch exchange rates',
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// Endpoint to manually update rates (for development/testing)
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    
+    if (!body.rates || typeof body.rates !== 'object') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid rates object' },
+        { status: 400 }
+      )
+    }
+
+    cachedRates = {
+      rates: body.rates,
+      base: 'USD',
+      date: new Date().toISOString().split('T')[0],
+      source: 'manual',
+    }
+    cacheTime = Date.now()
+
+    console.log('[API] Rates manually updated')
+    return NextResponse.json({
+      success: true,
+      message: 'Rates updated successfully',
+      rates: body.rates,
+    })
+  } catch (error) {
+    console.error('POST Error:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to update rates',
       },
       { status: 500 }
     )

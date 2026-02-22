@@ -61,9 +61,9 @@ const CURRENCIES = [
         symbol: '₹'
     },
     {
-        code: 'KRW',
-        name: 'South Korean Won',
-        symbol: '₩'
+        code: 'PLN',
+        name: 'Polish Zloty',
+        symbol: 'zł'
     }
 ];
 const formatCurrency = (amount, currency)=>{
