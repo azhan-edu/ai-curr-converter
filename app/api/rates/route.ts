@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const API_SOURCES = [
-  // Primary sources
-  'https://api.exchangerate.host/latest',
-  'https://api.exchangerate-api.com/v4/latest/USD',
-  'https://open.er-api.com/v6/latest/USD',
-  // Alternative sources
-  'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
-  'https://latest.currency-api.pages.dev/v1/currencies/usd.json',
+  // Primary source - frankfurter.app (most reliable)
+  'https://api.frankfurter.app/latest?from=USD',
+  // Fallback sources
+//   'https://api.exchangerate.host/latest',
+
+//   'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
 ]
 
 const CACHE_DURATION = 60 * 60 * 1000 // 1 hour
@@ -35,10 +34,14 @@ async function fetchFromSource(url: string): Promise<any> {
   const timeoutId = setTimeout(() => controller.abort(), 15000)
 
   try {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+
     console.log(`[API] Attempting to fetch from: ${url}`)
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
+        "cache": "no-store",
+        "agent": new (require('https').Agent)({ family: 4 }),
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
@@ -76,7 +79,12 @@ async function getExchangeRates(): Promise<any> {
       let base: string
       
       // Handle different API response formats
-      if (data.rates) {
+      if (source.includes('frankfurter.app')) {
+        // frankfurter.app format - has rate object directly
+        rates = data.rates
+        base = data.base || 'USD'
+        console.log(`!!![API] frankfurter.app data:`, data)
+      } else if (data.rates && !data.conversion_rates && !data.usd) {
         // exchangerate.host format
         rates = data.rates
         base = data.base || 'USD'
@@ -91,6 +99,11 @@ async function getExchangeRates(): Promise<any> {
       } else {
         console.warn(`[API] Unknown response format from ${source}`)
         throw new Error('Invalid response format')
+      }
+
+      // Ensure base currency is included in rates with value of 1.0
+      if (!rates[base]) {
+        rates = { ...rates, [base]: 1.0 }
       }
 
       console.log(`[API] Successfully obtained rates from ${source}`)
