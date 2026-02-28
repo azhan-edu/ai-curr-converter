@@ -201,3 +201,76 @@ Only consider a task complete when all are true:
 - [x] No server/client boundary violations
 - [x] No unnecessary files introduced
 - [x] Changes logged with rationale
+
+# 0. CODE ANALYSIS & CONTEXT RESTRICTIONS (CRITICAL)
+
+When analyzing the repository or generating code, GitHub Copilot MUST ignore
+the following directories and files completely.
+
+These folders are considered generated, build, tooling, or irrelevant to
+application logic and must NEVER be used as context for:
+
+- Code analysis
+- Architecture decisions
+- Refactoring suggestions
+- Dependency inference
+- Business logic generation
+- Import suggestions
+
+## ❌ Forbidden Folders
+
+Copilot must ignore:
+
+- `docs/`
+- `.next/`
+- `.vscode/`
+- `.git/`
+- `node_modules/`
+- `coverage/`
+- `dist/`
+- `build/`
+- `.turbo/`
+- `.cache/`
+- `out/`
+
+## ❌ Forbidden Files
+
+- Lock files (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`)
+- Auto-generated type definitions
+- Compiled JavaScript files
+- Environment files (`.env*`)
+- Log files
+
+## ❌ Forbidden Behaviors
+
+- Do NOT read compiled output inside `.next`
+- Do NOT analyze bundled or transpiled files
+- Do NOT infer architecture from generated files
+- Do NOT modify configuration files unless explicitly requested
+- Do NOT use hidden IDE metadata (e.g., `.vscode/settings.json`)
+
+## ✅ Allowed Context
+
+Copilot may only use:
+
+- `/app`
+- `/components`
+- `/hooks`
+- `/utils`
+- `/types`
+- `/styles`
+- `/services`
+- Explicit configuration files (next.config.js, tsconfig.json) when necessary
+
+## Rationale
+
+Generated folders often contain compiled artifacts that:
+- Mislead static analysis
+- Introduce duplicate code
+- Break type assumptions
+- Cause incorrect import paths
+- Lead to invalid refactoring
+
+Copilot must treat them as non-existent.
+
+Failure to follow this rule may result in incorrect architecture decisions.

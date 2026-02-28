@@ -8,7 +8,7 @@ import CurrencyInput from '@/components/CurrencyInput'
 import CurrencySelect from '@/components/CurrencySelect'
 import SwapButton from '@/components/SwapButton'
 import ConversionResult from '@/components/ConversionResult'
-import History from '@/components/History'
+import ConversionHistory from '@/components/ConversionHistory'
 
 export default function CurrencyConverter() {
   const [amount, setAmount] = useState('')
@@ -174,7 +174,7 @@ export default function CurrencyConverter() {
           )}
         </div>
 
-        <History
+        <ConversionHistory
           history={history}
           onClear={handleClearHistory}
           onReload={handleReloadConversion}

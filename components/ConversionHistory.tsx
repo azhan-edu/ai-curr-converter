@@ -9,7 +9,7 @@ interface HistoryProps {
   onReload: (conversion: ConversionHistory) => void
 }
 
-export default function History({ history, onClear, onReload }: HistoryProps) {
+export default function ConversionHistory({ history, onClear, onReload }: HistoryProps) {
   if (history.length === 0) return null
 
   return (

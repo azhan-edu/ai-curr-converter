@@ -1,7 +1,8 @@
 ---
-name: Add unit tests with custom coverage for selected code
+name: unitTestWithCoverage
 description: Add Unit Tests with custom coverage
 ---
 Generate unit tests for ${selection}
 File: ${fileName}
-Coverage target: ${input:coveragePercentage}%
+${prompt:unitTestsCommon}
+Tests coverage target: ${input:coveragePercentage}%
