@@ -23,3 +23,13 @@
 ## 4) Coverage + accessibility gate
 - Confirm repository line coverage stays >= 80%.
 - Confirm favorite controls expose accessible names and state semantics and are keyboard operable.
+
+## 5) Verification outcomes (2026-02-28)
+- Focused tests: PASS (`npm test -- components/CurrencySelect.test.tsx utils/currency.test.ts utils/storage.test.ts app/page.test.tsx`)
+- Full test suite: PASS (`npm test`) — 7/7 suites, 42/42 tests
+- Typecheck: PASS (`npx tsc --noEmit`)
+- Coverage: PASS floor check (`npm test -- --coverage`) — overall lines: 87.35% (>=80%)
+- Accessibility checks captured:
+	- Favorite toggle controls expose explicit accessible names (e.g., "Add USD to favorites", "Remove USD from favorites")
+	- Favorite controls expose state semantics via `aria-pressed`
+	- Favorite controls remain keyboard operable via native button semantics with visible focus ring classes

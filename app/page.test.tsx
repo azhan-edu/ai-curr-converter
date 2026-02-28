@@ -3,12 +3,16 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import CurrencyConverter from './page'
-import { saveConversion } from '@/utils/storage'
+import { addFavoriteCurrency, getFavoriteCurrencies, removeFavoriteCurrency, saveConversion } from '@/utils/storage'
 
 jest.mock('@/utils/storage', () => ({
   getConversionHistory: jest.fn(() => []),
   saveConversion: jest.fn(),
   clearConversionHistory: jest.fn(),
+  getFavoriteCurrencies: jest.fn(() => []),
+  addFavoriteCurrency: jest.fn((code: string) => ({ success: true, favorites: [code] })),
+  removeFavoriteCurrency: jest.fn((code: string) => ({ success: true, favorites: [], removed: code })),
+  MAX_FAVORITES: 5,
   getUrlParams: jest.fn(() => ({})),
   updateUrlParams: jest.fn(),
 }))
@@ -16,6 +20,16 @@ jest.mock('@/utils/storage', () => ({
 describe('CurrencyConverter currency selection behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+
+    ;(getFavoriteCurrencies as jest.Mock).mockReturnValue([])
+    ;(addFavoriteCurrency as jest.Mock).mockImplementation((code: string) => ({
+      success: true,
+      favorites: [code],
+    }))
+    ;(removeFavoriteCurrency as jest.Mock).mockImplementation(() => ({
+      success: true,
+      favorites: [],
+    }))
 
     global.fetch = jest.fn().mockResolvedValue({
       json: async () => ({
@@ -246,5 +260,86 @@ describe('CurrencyConverter currency selection behavior', () => {
     })
 
     expect(screen.getByText('1 USD = 0.9200 EUR')).toBeInTheDocument()
+  })
+
+  it('marks and unmarks selected currency as favorite from selector controls', async () => {
+    const user = userEvent.setup()
+
+    ;(addFavoriteCurrency as jest.Mock).mockImplementation((code: string) => ({
+      success: true,
+      favorites: [code],
+    }))
+    ;(removeFavoriteCurrency as jest.Mock).mockImplementation(() => ({
+      success: true,
+      favorites: [],
+    }))
+
+    render(<CurrencyConverter />)
+
+    const addButton = screen.getByRole('button', { name: 'Add USD to favorites' })
+    await user.click(addButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('USD added to favorites.')).toBeInTheDocument()
+    })
+    expect(addFavoriteCurrency).toHaveBeenCalledWith('USD')
+
+    const removeButton = screen.getByRole('button', { name: 'Remove USD from favorites' })
+    await user.click(removeButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('USD removed from favorites.')).toBeInTheDocument()
+    })
+    expect(removeFavoriteCurrency).toHaveBeenCalledWith('USD')
+  })
+
+  it('renders favorites at top of both selectors when favorites exist', async () => {
+    const user = userEvent.setup()
+
+    ;(addFavoriteCurrency as jest.Mock).mockImplementation((code: string) => ({
+      success: true,
+      favorites: ['GBP', code],
+    }))
+
+    render(<CurrencyConverter />)
+
+    const [fromSelect, toSelect] = screen.getAllByRole('combobox') as HTMLSelectElement[]
+    await user.selectOptions(fromSelect, 'GBP')
+    await user.click(screen.getByRole('button', { name: 'Add GBP to favorites' }))
+
+    await waitFor(() => {
+      const fromOptions = Array.from(fromSelect.options).map((option) => option.value)
+      const toOptions = Array.from(toSelect.options).map((option) => option.value)
+
+      expect(fromOptions[0]).toBe('GBP')
+      expect(toOptions[0]).toBe('GBP')
+    })
+  })
+
+  it('hydrates favorites from storage on load and blocks adding when max limit is reached', async () => {
+    const user = userEvent.setup()
+
+    ;(getFavoriteCurrencies as jest.Mock).mockReturnValue(['USD', 'EUR', 'GBP', 'JPY', 'CAD'])
+    ;(addFavoriteCurrency as jest.Mock).mockReturnValue({
+      success: false,
+      favorites: ['USD', 'EUR', 'GBP', 'JPY', 'CAD'],
+      error: 'You can only have up to 5 favorite currencies.',
+    })
+
+    render(<CurrencyConverter />)
+
+    const [fromSelect] = screen.getAllByRole('combobox') as HTMLSelectElement[]
+    await user.selectOptions(fromSelect, 'AUD')
+
+    const addAudButton = screen.getByRole('button', { name: 'Add AUD to favorites' })
+    await user.click(addAudButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('You can only have up to 5 favorite currencies.')).toBeInTheDocument()
+    })
+
+    expect(addFavoriteCurrency).toHaveBeenCalledWith('AUD')
+
+    expect(getFavoriteCurrencies).toHaveBeenCalled()
   })
 })

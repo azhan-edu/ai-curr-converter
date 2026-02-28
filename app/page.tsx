@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { ExchangeRate, ConversionHistory as ConversionHistoryEntry, RatesApiResponse } from '@/types'
-import { CURRENCIES, convertCurrency, validateAmount } from '@/utils/currency'
-import { getConversionHistory, saveConversion, clearConversionHistory, getUrlParams, updateUrlParams } from '@/utils/storage'
+import { CURRENCIES, convertCurrency, sortCurrenciesByFavorites, validateAmount } from '@/utils/currency'
+import { addFavoriteCurrency, clearConversionHistory, getConversionHistory, getFavoriteCurrencies, getUrlParams, MAX_FAVORITES, removeFavoriteCurrency, saveConversion, updateUrlParams } from '@/utils/storage'
 import CurrencyInput from '@/components/CurrencyInput'
 import CurrencySelect from '@/components/CurrencySelect'
 import SwapButton from '@/components/SwapButton'
@@ -26,6 +26,7 @@ export default function CurrencyConverter() {
   const [error, setError] = useState('')
   const [result, setResult] = useState<number | null>(null)
   const [history, setHistory] = useState<ConversionHistoryEntry[]>([])
+  const [favoriteCurrencies, setFavoriteCurrencies] = useState<string[]>([])
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const [ratesSourceUrl, setRatesSourceUrl] = useState<string | null>(null)
   const [ratesBaseCurrency, setRatesBaseCurrency] = useState<string | null>(null)
@@ -43,7 +44,13 @@ export default function CurrencyConverter() {
   // Load history
   useEffect(() => {
     setHistory(getConversionHistory())
+    setFavoriteCurrencies(getFavoriteCurrencies())
   }, [])
+
+  const orderedCurrencies = useMemo(
+    () => sortCurrenciesByFavorites(CURRENCIES, favoriteCurrencies),
+    [favoriteCurrencies]
+  )
 
   // Fetch rates
   const fetchRates = useCallback(async (options?: { forceRefresh?: boolean; showNotification?: boolean }) => {
@@ -195,6 +202,28 @@ export default function CurrencyConverter() {
     await fetchRates({ forceRefresh: true, showNotification: true })
   }
 
+  const handleToggleFavorite = (currencyCode: string) => {
+    const isAlreadyFavorite = favoriteCurrencies.includes(currencyCode)
+
+    if (isAlreadyFavorite) {
+      const result = removeFavoriteCurrency(currencyCode)
+      setFavoriteCurrencies(result.favorites)
+      setNotification({ type: 'success', message: `${currencyCode} removed from favorites.` })
+      return
+    }
+
+    const result = addFavoriteCurrency(currencyCode)
+
+    if (!result.success) {
+      setFavoriteCurrencies(result.favorites)
+      setNotification({ type: 'error', message: result.error ?? `You can only have up to ${MAX_FAVORITES} favorite currencies.` })
+      return
+    }
+
+    setFavoriteCurrencies(result.favorites)
+    setNotification({ type: 'success', message: `${currencyCode} added to favorites.` })
+  }
+
   const hasPositiveAmount = Number.isFinite(Number(amount)) && Number(amount) > 0
 
   return (
@@ -219,9 +248,11 @@ export default function CurrencyConverter() {
               <CurrencySelect
                 value={fromCurrency}
                 onChange={handleFromCurrencyChange}
-                currencies={CURRENCIES}
+                currencies={orderedCurrencies}
                 label="From"
                 disabled={isRefreshing}
+                isFavorite={favoriteCurrencies.includes(fromCurrency)}
+                onToggleFavorite={handleToggleFavorite}
               />
 
               <SwapButton onClick={handleSwap} disabled={isRefreshing} />
@@ -229,9 +260,11 @@ export default function CurrencyConverter() {
               <CurrencySelect
                 value={toCurrency}
                 onChange={handleToCurrencyChange}
-                currencies={CURRENCIES}
+                currencies={orderedCurrencies}
                 label="To"
                 disabled={isRefreshing}
+                isFavorite={favoriteCurrencies.includes(toCurrency)}
+                onToggleFavorite={handleToggleFavorite}
               />
             </div>
           </div>

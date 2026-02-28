@@ -70,3 +70,26 @@ export const validateAmount = (amount: string): { isValid: boolean; error?: stri
   }
   return { isValid: true };
 };
+
+export const sortCurrenciesByFavorites = (
+  currencies: Currency[],
+  favoriteCurrencyCodes: string[]
+): Currency[] => {
+  if (favoriteCurrencyCodes.length === 0) {
+    return currencies;
+  }
+
+  const favoriteSet = new Set(favoriteCurrencyCodes);
+  const favorites: Currency[] = [];
+  const nonFavorites: Currency[] = [];
+
+  for (const currency of currencies) {
+    if (favoriteSet.has(currency.code)) {
+      favorites.push(currency);
+    } else {
+      nonFavorites.push(currency);
+    }
+  }
+
+  return [...favorites, ...nonFavorites];
+};

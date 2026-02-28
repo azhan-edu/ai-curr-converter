@@ -17,9 +17,9 @@
 
 **Purpose**: Prepare shared feature scaffolding and test entry points.
 
-- [ ] T001 Create feature constants for favorites storage key and max size in utils/storage.ts
-- [ ] T002 [P] Add favorite-related shared types/interfaces in types/index.ts
-- [ ] T003 [P] Add test skeleton for storage favorites behavior in utils/storage.test.ts
+- [x] T001 Create feature constants for favorites storage key and max size in utils/storage.ts
+- [x] T002 [P] Add favorite-related shared types/interfaces in types/index.ts
+- [x] T003 [P] Add test skeleton for storage favorites behavior in utils/storage.test.ts
 
 ---
 
@@ -29,11 +29,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Implement read/sanitize helper for favorite currency codes in utils/storage.ts
-- [ ] T005 Implement write/remove favorite helpers with max=5 enforcement in utils/storage.ts
-- [ ] T006 [P] Implement deterministic favorites-first ordering helper in utils/currency.ts
-- [ ] T007 [P] Add utility tests for ordering logic and edge cases in utils/currency.test.ts
-- [ ] T008 Add storage utility tests for malformed payload recovery and deduplication in utils/storage.test.ts
+- [x] T004 Implement read/sanitize helper for favorite currency codes in utils/storage.ts
+- [x] T005 Implement write/remove favorite helpers with max=5 enforcement in utils/storage.ts
+- [x] T006 [P] Implement deterministic favorites-first ordering helper in utils/currency.ts
+- [x] T007 [P] Add utility tests for ordering logic and edge cases in utils/currency.test.ts
+- [x] T008 Add storage utility tests for malformed payload recovery and deduplication in utils/storage.test.ts
 
 **Checkpoint**: Foundation ready — user story implementation can now begin.
 
@@ -47,14 +47,14 @@
 
 ### Tests for User Story 1 (REQUIRED) ⚠️
 
-- [ ] T009 [P] [US1] Add component tests for favorite toggle actions and ARIA pressed state in components/CurrencySelect.test.tsx
-- [ ] T010 [P] [US1] Add page interaction tests for mark/unmark flow and feedback message in app/page.test.tsx
+- [x] T009 [P] [US1] Add component tests for favorite toggle actions and ARIA pressed state in components/CurrencySelect.test.tsx
+- [x] T010 [P] [US1] Add page interaction tests for mark/unmark flow and feedback message in app/page.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Extend currency selector props and UI to expose favorite toggle control for selected currency in components/CurrencySelect.tsx
-- [ ] T012 [US1] Add favorite toggle state handling and feedback messaging in app/page.tsx
-- [ ] T013 [US1] Ensure keyboard operability and visible focus styles for favorite controls in components/CurrencySelect.tsx
+- [x] T011 [US1] Extend currency selector props and UI to expose favorite toggle control for selected currency in components/CurrencySelect.tsx
+- [x] T012 [US1] Add favorite toggle state handling and feedback messaging in app/page.tsx
+- [x] T013 [US1] Ensure keyboard operability and visible focus styles for favorite controls in components/CurrencySelect.tsx
 
 **Checkpoint**: User Story 1 is independently functional and testable.
 
@@ -68,13 +68,13 @@
 
 ### Tests for User Story 2 (REQUIRED) ⚠️
 
-- [ ] T014 [P] [US2] Add selector ordering tests for favorites-first behavior in components/CurrencySelect.test.tsx
-- [ ] T015 [P] [US2] Add page-level regression test for synchronized ordering in both selectors in app/page.test.tsx
+- [x] T014 [P] [US2] Add selector ordering tests for favorites-first behavior in components/CurrencySelect.test.tsx
+- [x] T015 [P] [US2] Add page-level regression test for synchronized ordering in both selectors in app/page.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Integrate favorites ordering helper into page selector data flow in app/page.tsx
-- [ ] T017 [US2] Update selector rendering to consume preordered currency list safely in components/CurrencySelect.tsx
+- [x] T016 [US2] Integrate favorites ordering helper into page selector data flow in app/page.tsx
+- [x] T017 [US2] Update selector rendering to consume preordered currency list safely in components/CurrencySelect.tsx
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
 
@@ -88,14 +88,14 @@
 
 ### Tests for User Story 3 (REQUIRED) ⚠️
 
-- [ ] T018 [P] [US3] Add storage persistence tests for load/reload lifecycle in utils/storage.test.ts
-- [ ] T019 [P] [US3] Add limit-enforcement and user-feedback tests in app/page.test.tsx
+- [x] T018 [P] [US3] Add storage persistence tests for load/reload lifecycle in utils/storage.test.ts
+- [x] T019 [P] [US3] Add limit-enforcement and user-feedback tests in app/page.test.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Hydrate favorite state from storage on page load with invalid-data fallback in app/page.tsx
-- [ ] T021 [US3] Persist favorite mutations using storage helpers in app/page.tsx
-- [ ] T022 [US3] Enforce max=5 at interaction boundary and show actionable limit message in app/page.tsx
+- [x] T020 [US3] Hydrate favorite state from storage on page load with invalid-data fallback in app/page.tsx
+- [x] T021 [US3] Persist favorite mutations using storage helpers in app/page.tsx
+- [x] T022 [US3] Enforce max=5 at interaction boundary and show actionable limit message in app/page.tsx
 
 **Checkpoint**: All user stories are independently functional.
 
@@ -105,11 +105,11 @@
 
 **Purpose**: Final quality gates across all stories.
 
-- [ ] T023 [P] Update feature documentation and manual verification notes in specs/001-favorite-currencies/quickstart.md
-- [ ] T024 Run full test suite and fix feature-related regressions in app/page.test.tsx
-- [ ] T025 [P] Run typecheck and resolve feature-related typing issues in app/page.tsx
-- [ ] T026 [P] Run coverage validation to confirm >=80% line coverage in coverage/lcov-report/index.html
-- [ ] T027 [P] Execute WCAG 2.1 AA keyboard/focus/label verification and capture outcomes in specs/001-favorite-currencies/quickstart.md
+- [x] T023 [P] Update feature documentation and manual verification notes in specs/001-favorite-currencies/quickstart.md
+- [x] T024 Run full test suite and fix feature-related regressions in app/page.test.tsx
+- [x] T025 [P] Run typecheck and resolve feature-related typing issues in app/page.tsx
+- [x] T026 [P] Run coverage validation to confirm >=80% line coverage in coverage/lcov-report/index.html
+- [x] T027 [P] Execute WCAG 2.1 AA keyboard/focus/label verification and capture outcomes in specs/001-favorite-currencies/quickstart.md
 
 ---
 

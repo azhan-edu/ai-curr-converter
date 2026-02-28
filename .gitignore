@@ -2,3 +2,12 @@
 .next/
 .swc/
 coverage/
+dist/
+build/
+*.log
+.env*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.tsbuildinfo

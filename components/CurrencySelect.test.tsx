@@ -72,4 +72,48 @@ describe('CurrencySelect', () => {
     const select = container.querySelector('select')
     expect(select).toBeDisabled()
   })
+
+  it('calls onToggleFavorite and exposes pressed state for selected currency', async () => {
+    const user = userEvent.setup()
+    const onChange = jest.fn()
+    const onToggleFavorite = jest.fn()
+
+    render(
+      <CurrencySelect
+        value="USD"
+        onChange={onChange}
+        currencies={currencies}
+        label="From"
+        isFavorite
+        onToggleFavorite={onToggleFavorite}
+      />
+    )
+
+    const favoriteButton = screen.getByRole('button', { name: 'Remove USD from favorites' })
+    expect(favoriteButton).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(favoriteButton)
+
+    expect(onToggleFavorite).toHaveBeenCalledTimes(1)
+    expect(onToggleFavorite).toHaveBeenCalledWith('USD')
+  })
+
+  it('renders favorites first when provided ordered currencies', () => {
+    const onChange = jest.fn()
+    const orderedCurrencies: Currency[] = [currencies[2], currencies[0], currencies[1]]
+
+    const { container } = render(
+      <CurrencySelect
+        value="GBP"
+        onChange={onChange}
+        currencies={orderedCurrencies}
+        label="From"
+      />
+    )
+
+    const options = Array.from(container.querySelectorAll('option')).map((option) => option.textContent)
+    expect(options[0]).toBe('GBP - British Pound')
+    expect(options[1]).toBe('USD - US Dollar')
+    expect(options[2]).toBe('EUR - Euro')
+  })
 })

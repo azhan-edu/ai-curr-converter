@@ -39,3 +39,13 @@ export interface ApiError {
   message: string;
   code?: string;
 }
+
+export interface FavoriteStorageRecord {
+  codes: string[];
+}
+
+export interface FavoriteMutationResult {
+  success: boolean;
+  favorites: string[];
+  error?: string;
+}
