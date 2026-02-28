@@ -31,7 +31,12 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Code Quality Gate: planned implementation is strictly typed, minimal,
+  maintainable, and aligned with existing architecture.
+- Testing Gate: planned test strategy covers all behavior changes and preserves
+  a minimum 80% line coverage.
+- Accessibility Gate: UI-impacting work includes WCAG 2.1 AA requirements and
+  verification approach (keyboard, focus, contrast, semantics).
 
 ## Project Structure
 

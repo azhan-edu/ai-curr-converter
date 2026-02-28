@@ -65,6 +65,12 @@
 
 [Add more user stories as needed, each with an assigned priority]
 
+### Constitution Alignment *(mandatory)*
+
+- Define code-quality expectations for changed modules.
+- Define test strategy that preserves at least 80% line coverage.
+- For UI changes, define WCAG 2.1 AA requirements and validation scope.
+
 ### Edge Cases
 
 <!--
