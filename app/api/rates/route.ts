@@ -9,7 +9,26 @@ const API_SOURCES = [
 //   'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
 ]
 
-const CACHE_DURATION = 60 * 60 * 1000 // 1 hour
+const DEFAULT_CACHE_TTL_SECONDS = 60 * 60
+
+function resolveCacheTtlSeconds(): number {
+  const ttlEnv = process.env.RATES_CACHE_TTL_SECONDS
+
+  if (!ttlEnv) {
+    return DEFAULT_CACHE_TTL_SECONDS
+  }
+
+  const ttlSeconds = Number(ttlEnv)
+
+  if (Number.isFinite(ttlSeconds) && ttlSeconds >= 0) {
+    return ttlSeconds
+  }
+
+  console.warn('[API] Invalid RATES_CACHE_TTL_SECONDS value. Using default TTL.')
+  return DEFAULT_CACHE_TTL_SECONDS
+}
+
+const CONFIGURED_CACHE_TTL_SECONDS = resolveCacheTtlSeconds()
 
 // Fallback exchange rates for when APIs are unavailable
 // Updated: 2026-02-22 - These are realistic rates based on historical data
@@ -28,6 +47,10 @@ const FALLBACK_RATES: { [key: string]: number } = {
 
 let cachedRates: any = null
 let cacheTime: number = 0
+
+function getCacheDurationMs(): number {
+  return CONFIGURED_CACHE_TTL_SECONDS * 1000
+}
 
 async function fetchFromSource(url: string): Promise<any> {
   const controller = new AbortController()
@@ -63,9 +86,12 @@ async function fetchFromSource(url: string): Promise<any> {
   }
 }
 
-async function getExchangeRates(): Promise<any> {
+async function getExchangeRates(forceRefresh: boolean = false): Promise<any> {
   const now = Date.now()
-  if (cachedRates && now - cacheTime < CACHE_DURATION) {
+  const cacheDuration = getCacheDurationMs()
+  const shouldBypassCache = forceRefresh || cacheDuration === 0
+
+  if (!shouldBypassCache && cachedRates && now - cacheTime < cacheDuration) {
     console.log('[API] Using cached rates')
     return cachedRates
   }
@@ -136,7 +162,8 @@ async function getExchangeRates(): Promise<any> {
 
 export async function GET(request: NextRequest) {
   try {
-    const data = await getExchangeRates()
+    const shouldForceRefresh = request.nextUrl.searchParams.get('refresh') === '1'
+    const data = await getExchangeRates(shouldForceRefresh)
     return NextResponse.json({
       success: true,
       ...data,

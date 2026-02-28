@@ -221,6 +221,7 @@ application logic and must NEVER be used as context for:
 
 Copilot must ignore:
 
+- `logs/`
 - `docs/`
 - `.next/`
 - `.vscode/`

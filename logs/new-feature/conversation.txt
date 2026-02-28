@@ -1,0 +1,88 @@
+New Feature
+
+I need to add a "Refresh Rates" button to the currency converter.
+Ask me clarifying questions to understand the requirements.
+
+====
+
+Great—before implementing “Refresh Rates”, I need a few details to avoid wrong behavior.
+
+Clarifying questions
+Trigger behavior
+
+Should the button force-fetch fresh rates immediately, bypassing the 1-hour cache?
+Or should it only re-run conversion using current cached rates?
+Scope of refresh
+
+Refresh only the currently selected currency pair?
+Or refresh all rates for the selected base currency?
+Provider strategy
+
+On refresh, should we still use the same fallback provider chain (primary → secondary)?
+If primary fails, should UI indicate fallback was used?
+UI placement
+
+Where should the button appear (next to Convert, near rate display, header, etc.)?
+Should it be visible on initial load or only after first conversion?
+Loading/disabled state
+
+Should button show a spinner/text like “Refreshing…”?
+Should Convert + inputs be disabled while refresh is in progress?
+Result update
+
+After refresh, should we automatically update the displayed converted amount?
+Should we also append this action to conversion history, or avoid history pollution?
+URL/query params
+
+Any new query param needed (e.g., refreshedAt) or keep current URL behavior unchanged?
+Error UX
+
+Preferred message when refresh fails?
+Should previous successful rate remain visible if refresh fails?
+Rate metadata
+
+Do you want to display “Last updated at …” and/or provider source in UI?
+Testing expectations
+
+Do you want coverage for: loading state, success update, fallback path, and refresh failure recovery?
+If you want, I can next propose a concrete implementation plan (files + tests) once you answer these.
+
+
+======
+
+1.
+Implement both cases in this way: create env variable for cache duration time. If it equals 0 (zero) page should be refreshed immediately.
+2.
+Refresh only the currently selected currency pair.
+3.
+App should use the same fallback flow
+4.
+Put this Refresh Rates button to the separate section/palel 'refresh rates panel' above the rate display panel
+This button should be visible when Amount more then zero?
+5.
+Button should show a spinner/text like “Refreshing…”?
+Convert + inputs should be disabled while refresh is in progress
+When refresh completed notification popup "Currency rates are refreshed" should be displayed.
+6.
+After refresh, we should automatically update the displayed converted amount
+We should not update the history
+7.
+No
+8.
+If refresh fails we should show message: Currency rates refresh failed.
+Previous successful rate remain visible if refresh fails.
+9.
+Yes. Put this last rates update data to the 'refresh rates panel'
+10
+Testing expectations are the same as for all project
+
+
+##Additional clarifications:
+Cache env value unit is likely seconds.
+Yes - “Visible when Amount more than zero” interpreted as: show refresh button only if amount > 0.
+There is a tailwindcss in the project - use its Notification component
+
+### More clarifications
+- Currency Rates panel should be implemented as a separate component
+- add to the currency rates panel a collapsible subpanel with the rates source info (basic URL) and a table with all loaded currency rates
+- DEFAULT_CACHE_TTL_SECONDS chould be initialy defined and configurable via .env file

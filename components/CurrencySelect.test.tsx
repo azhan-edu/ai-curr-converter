@@ -55,4 +55,21 @@ describe('CurrencySelect', () => {
     expect(onChange).toHaveBeenCalledTimes(1)
     expect(onChange).toHaveBeenCalledWith('EUR')
   })
+
+  it('renders as disabled when disabled prop is true', () => {
+    const onChange = jest.fn()
+
+    const { container } = render(
+      <CurrencySelect
+        value="USD"
+        onChange={onChange}
+        currencies={currencies}
+        label="From"
+        disabled
+      />
+    )
+
+    const select = container.querySelector('select')
+    expect(select).toBeDisabled()
+  })
 })

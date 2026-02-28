@@ -7,9 +7,10 @@ interface CurrencySelectProps {
   onChange: (value: string) => void
   currencies: Currency[]
   label: string
+  disabled?: boolean
 }
 
-export default function CurrencySelect({ value, onChange, currencies, label }: CurrencySelectProps) {
+export default function CurrencySelect({ value, onChange, currencies, label, disabled = false }: CurrencySelectProps) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -18,6 +19,7 @@ export default function CurrencySelect({ value, onChange, currencies, label }: C
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
         className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         {currencies.map((currency) => (

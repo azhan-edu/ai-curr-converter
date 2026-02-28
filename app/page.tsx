@@ -1,14 +1,20 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Currency, ExchangeRate, ConversionHistory as ConversionHistoryEntry } from '@/types'
-import { CURRENCIES, convertCurrency, formatCurrency, validateAmount } from '@/utils/currency'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { ExchangeRate, ConversionHistory as ConversionHistoryEntry, RatesApiResponse } from '@/types'
+import { CURRENCIES, convertCurrency, validateAmount } from '@/utils/currency'
 import { getConversionHistory, saveConversion, clearConversionHistory, getUrlParams, updateUrlParams } from '@/utils/storage'
 import CurrencyInput from '@/components/CurrencyInput'
 import CurrencySelect from '@/components/CurrencySelect'
 import SwapButton from '@/components/SwapButton'
 import ConversionResult from '@/components/ConversionResult'
 import ConversionHistory from '@/components/ConversionHistory'
+import CurrencyRatesPanel from '@/components/CurrencyRatesPanel'
+
+type NotificationState = {
+  type: 'success' | 'error'
+  message: string
+}
 
 export default function CurrencyConverter() {
   const [amount, setAmount] = useState('')
@@ -16,9 +22,15 @@ export default function CurrencyConverter() {
   const [toCurrency, setToCurrency] = useState('EUR')
   const [rates, setRates] = useState<ExchangeRate | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<number | null>(null)
   const [history, setHistory] = useState<ConversionHistoryEntry[]>([])
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const [ratesSourceUrl, setRatesSourceUrl] = useState<string | null>(null)
+  const [ratesBaseCurrency, setRatesBaseCurrency] = useState<string | null>(null)
+  const [notification, setNotification] = useState<NotificationState | null>(null)
+  const suppressNextHistorySaveRef = useRef(false)
 
   // Load URL params on mount
   useEffect(() => {
@@ -34,26 +46,52 @@ export default function CurrencyConverter() {
   }, [])
 
   // Fetch rates
-  const fetchRates = useCallback(async () => {
+  const fetchRates = useCallback(async (options?: { forceRefresh?: boolean; showNotification?: boolean }) => {
+    const forceRefresh = options?.forceRefresh ?? false
+    const showNotification = options?.showNotification ?? false
+
     try {
-      setLoading(true)
+      if (forceRefresh) {
+        setIsRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+
       setError('')
-      const response = await fetch('/api/rates')
-      const data = await response.json()
-      if (data.success) {
+      const endpoint = forceRefresh ? '/api/rates?refresh=1' : '/api/rates'
+      const response = await fetch(endpoint)
+      const data: RatesApiResponse = await response.json()
+
+      if (data.success && data.rates) {
+        if (forceRefresh) {
+          suppressNextHistorySaveRef.current = true
+        }
+
         setRates(data.rates)
+        setLastUpdated(data.date ?? null)
+        setRatesSourceUrl(data.source ?? null)
+        setRatesBaseCurrency(data.base ?? null)
+
+        if (forceRefresh && showNotification) {
+          setNotification({ type: 'success', message: 'Currency rates are refreshed' })
+        }
       } else {
         throw new Error(data.error || 'Failed to fetch rates')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch exchange rates')
+      if (forceRefresh) {
+        setNotification({ type: 'error', message: 'Currency rates refresh failed.' })
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to fetch exchange rates')
+      }
     } finally {
       setLoading(false)
+      setIsRefreshing(false)
     }
-  }, [setLoading, setError, setRates])
+  }, [setLoading, setError, setRates, setLastUpdated, setRatesSourceUrl, setRatesBaseCurrency, setIsRefreshing, setNotification])
 
   // Convert currency
-  const performConversion = useCallback(() => {
+  const performConversion = useCallback((shouldSaveHistory: boolean = true) => {
     if (!rates || !amount) return
 
     const validation = validateAmount(amount)
@@ -68,15 +106,21 @@ export default function CurrencyConverter() {
     setResult(converted)
     setError('')
 
-    // Save to history
-    saveConversion({
-      from: fromCurrency,
-      to: toCurrency,
-      amount: numAmount,
-      result: converted,
-      rate: rates[toCurrency] / rates[fromCurrency],
-    })
-    setHistory(getConversionHistory())
+    const skipHistorySave = suppressNextHistorySaveRef.current
+    if (skipHistorySave) {
+      suppressNextHistorySaveRef.current = false
+    }
+
+    if (shouldSaveHistory && !skipHistorySave) {
+      saveConversion({
+        from: fromCurrency,
+        to: toCurrency,
+        amount: numAmount,
+        result: converted,
+        rate: rates[toCurrency] / rates[fromCurrency],
+      })
+      setHistory(getConversionHistory())
+    }
 
     // Update URL
     updateUrlParams(fromCurrency, toCurrency, amount)
@@ -96,13 +140,27 @@ export default function CurrencyConverter() {
     fetchRates()
   }, [fetchRates])
 
+  useEffect(() => {
+    if (!notification) return
+
+    const timeoutId = setTimeout(() => {
+      setNotification(null)
+    }, 3000)
+
+    return () => clearTimeout(timeoutId)
+  }, [notification])
+
   // Swap currencies
   const handleSwap = () => {
+    if (isRefreshing) return
+
     setFromCurrency(toCurrency)
     setToCurrency(fromCurrency)
   }
 
   const handleFromCurrencyChange = (nextFromCurrency: string) => {
+    if (isRefreshing) return
+
     if (nextFromCurrency === toCurrency) {
       setToCurrency(fromCurrency)
     }
@@ -111,6 +169,8 @@ export default function CurrencyConverter() {
   }
 
   const handleToCurrencyChange = (nextToCurrency: string) => {
+    if (isRefreshing) return
+
     if (nextToCurrency === fromCurrency) {
       setFromCurrency(toCurrency)
     }
@@ -131,6 +191,12 @@ export default function CurrencyConverter() {
     setToCurrency(conversion.to)
   }
 
+  const handleRefreshRates = async () => {
+    await fetchRates({ forceRefresh: true, showNotification: true })
+  }
+
+  const hasPositiveAmount = Number.isFinite(Number(amount)) && Number(amount) > 0
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -145,6 +211,7 @@ export default function CurrencyConverter() {
                 value={amount}
                 onChange={setAmount}
                 error={error}
+                disabled={isRefreshing}
               />
             </div>
 
@@ -154,18 +221,30 @@ export default function CurrencyConverter() {
                 onChange={handleFromCurrencyChange}
                 currencies={CURRENCIES}
                 label="From"
+                disabled={isRefreshing}
               />
 
-              <SwapButton onClick={handleSwap} />
+              <SwapButton onClick={handleSwap} disabled={isRefreshing} />
 
               <CurrencySelect
                 value={toCurrency}
                 onChange={handleToCurrencyChange}
                 currencies={CURRENCIES}
                 label="To"
+                disabled={isRefreshing}
               />
             </div>
           </div>
+
+          <CurrencyRatesPanel
+            lastUpdated={lastUpdated}
+            showRefreshButton={hasPositiveAmount}
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefreshRates}
+            sourceUrl={ratesSourceUrl}
+            baseCurrency={ratesBaseCurrency}
+            rates={rates}
+          />
 
           {result !== null && (
             <ConversionResult
@@ -180,6 +259,17 @@ export default function CurrencyConverter() {
           {loading && (
             <div className="text-center text-gray-600 mt-4">
               Loading exchange rates...
+            </div>
+          )}
+
+          {notification && (
+            <div
+              role="status"
+              className={`fixed top-4 right-4 px-4 py-3 rounded-md shadow-md text-white ${
+                notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+              }`}
+            >
+              {notification.message}
             </div>
           )}
 

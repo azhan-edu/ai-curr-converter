@@ -14,6 +14,17 @@ export interface ExchangeRatesResponse {
   date: string;
 }
 
+export interface RatesApiResponse {
+  success: boolean;
+  rates?: ExchangeRate;
+  base?: string;
+  date?: string;
+  source?: string;
+  isFallback?: boolean;
+  warning?: string;
+  error?: string;
+}
+
 export interface ConversionHistory {
   id: string;
   from: string;

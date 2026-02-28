@@ -1,6 +1,6 @@
 'use client'
 
-import { ConversionHistory } from '@/types'
+import type { ConversionHistory } from '@/types'
 import { formatCurrency } from '@/utils/currency'
 
 interface HistoryProps {
