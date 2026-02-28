@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Currency, ExchangeRate, ConversionHistory } from '@/types'
+import { Currency, ExchangeRate, ConversionHistory as ConversionHistoryEntry } from '@/types'
 import { CURRENCIES, convertCurrency, formatCurrency, validateAmount } from '@/utils/currency'
 import { getConversionHistory, saveConversion, clearConversionHistory, getUrlParams, updateUrlParams } from '@/utils/storage'
 import CurrencyInput from '@/components/CurrencyInput'
@@ -18,7 +18,7 @@ export default function CurrencyConverter() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<number | null>(null)
-  const [history, setHistory] = useState<ConversionHistory[]>([])
+  const [history, setHistory] = useState<ConversionHistoryEntry[]>([])
 
   // Load URL params on mount
   useEffect(() => {
@@ -102,6 +102,22 @@ export default function CurrencyConverter() {
     setToCurrency(fromCurrency)
   }
 
+  const handleFromCurrencyChange = (nextFromCurrency: string) => {
+    if (nextFromCurrency === toCurrency) {
+      setToCurrency(fromCurrency)
+    }
+
+    setFromCurrency(nextFromCurrency)
+  }
+
+  const handleToCurrencyChange = (nextToCurrency: string) => {
+    if (nextToCurrency === fromCurrency) {
+      setFromCurrency(toCurrency)
+    }
+
+    setToCurrency(nextToCurrency)
+  }
+
   // Clear history
   const handleClearHistory = () => {
     clearConversionHistory()
@@ -109,7 +125,7 @@ export default function CurrencyConverter() {
   }
 
   // Reload conversion from history
-  const handleReloadConversion = (conversion: ConversionHistory) => {
+  const handleReloadConversion = (conversion: ConversionHistoryEntry) => {
     setAmount(conversion.amount.toString())
     setFromCurrency(conversion.from)
     setToCurrency(conversion.to)
@@ -135,7 +151,7 @@ export default function CurrencyConverter() {
             <div className="flex items-center gap-2">
               <CurrencySelect
                 value={fromCurrency}
-                onChange={setFromCurrency}
+                onChange={handleFromCurrencyChange}
                 currencies={CURRENCIES}
                 label="From"
               />
@@ -144,7 +160,7 @@ export default function CurrencyConverter() {
 
               <CurrencySelect
                 value={toCurrency}
-                onChange={setToCurrency}
+                onChange={handleToCurrencyChange}
                 currencies={CURRENCIES}
                 label="To"
               />
