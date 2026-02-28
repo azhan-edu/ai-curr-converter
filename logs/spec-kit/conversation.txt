@@ -1,0 +1,18 @@
+> powershell -c "irm https://astral.sh/uv/install.ps1 | iex"      Downloading uv 0.10.7 (x86_64-pc-windows-msvc)                                                             Installing to C:\Users\a.zinhan\.local\bin
+  uv.exe
+  uvx.exe
+  uvx.exe
+  uvw.exe
+everything's installed!
+
+To add C:\Users\a.zinhan\.local\bin to your PATH, either restart your shell or run:
+
+    set Path=C:\Users\a.zinhan\.local\bin;%Path%   (cmd)
+    $env:Path = "C:\Users\a.zinhan\.local\bin;$env:Path"   (powershell)
+
+Correct command:
+> $env:Path = "C:\Users\a.zinhan\.local\bin;" + $env:Path
+
+> uv tool install --native-tls specify-cli --force --from git+https://github.com/github/spec-kit.git
+
+> uvx --from git+https://github.com/github/spec-kit.git specify init .
