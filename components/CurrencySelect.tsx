@@ -11,12 +11,15 @@ interface CurrencySelectProps {
 }
 
 export default function CurrencySelect({ value, onChange, currencies, label, disabled = false }: CurrencySelectProps) {
+  const selectId = `currency-${label.toLowerCase()}`
+
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1">
         {label}
       </label>
       <select
+        id={selectId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
