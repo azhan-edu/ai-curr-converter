@@ -11,6 +11,17 @@ const ratesSchema = z
     message: 'At least one currency rate is required',
   })
 
+/**
+ * Runtime schema for normalized exchange-rate payloads used by the rates API route.
+ *
+ * @example
+ * const parsed = normalizedRatesPayloadSchema.parse({
+ *   rates: { USD: 1, EUR: 0.92 },
+ *   base: 'USD',
+ *   date: '2026-03-05',
+ *   source: 'https://api.frankfurter.app/latest?from=USD',
+ * })
+ */
 export const normalizedRatesPayloadSchema = z.object({
   rates: ratesSchema,
   base: z.string().regex(CURRENCY_CODE_REGEX),
@@ -18,8 +29,38 @@ export const normalizedRatesPayloadSchema = z.object({
   source: z.string().min(1),
 })
 
+/**
+ * Strongly-typed normalized payload derived from `normalizedRatesPayloadSchema`.
+ *
+ * @example
+ * const payload: NormalizedRatesPayload = {
+ *   rates: { USD: 1, EUR: 0.92 },
+ *   base: 'USD',
+ *   date: '2026-03-05',
+ *   source: 'manual',
+ * }
+ */
 export type NormalizedRatesPayload = z.infer<typeof normalizedRatesPayloadSchema>
 
+/**
+ * Validates an unknown payload against the normalized rates schema.
+ *
+ * @param input - Unknown value from external API or normalized provider response.
+ * @returns A discriminated union with validated data on success, or a human-readable error message on failure.
+ *
+ * @example
+ * validateNormalizedRatesPayload({
+ *   rates: { USD: 1, EUR: 0.92 },
+ *   base: 'USD',
+ *   date: '2026-03-05',
+ *   source: 'https://api.frankfurter.app/latest?from=USD',
+ * })
+ * // { success: true, data: ... }
+ *
+ * @example
+ * validateNormalizedRatesPayload({ rates: { usd: 1 }, base: 'usd', date: '', source: '' })
+ * // { success: false, error: '...' }
+ */
 export function validateNormalizedRatesPayload(input: unknown): {
   success: true
   data: NormalizedRatesPayload

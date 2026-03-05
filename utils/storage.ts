@@ -3,7 +3,17 @@ import { ConversionHistory } from '@/types'
 const STORAGE_KEY = 'currency-converter-history'
 const MAX_HISTORY = 10
 
-// Get conversion history from localStorage
+/**
+ * Reads conversion history records from localStorage.
+ *
+ * @returns Parsed conversion history entries sorted by most recent first, or an empty array when unavailable/invalid.
+ *
+ * @example
+ * const history = getConversionHistory()
+ * if (history.length > 0) {
+ *   console.log(history[0].from, history[0].to)
+ * }
+ */
 export function getConversionHistory(): ConversionHistory[] {
   if (typeof window === 'undefined') return []
   try {
@@ -19,7 +29,21 @@ export function getConversionHistory(): ConversionHistory[] {
   }
 }
 
-// Save conversion to history
+/**
+ * Persists a conversion entry to localStorage and keeps only the latest ten records.
+ *
+ * @param conversion - Conversion payload without generated `id` and `timestamp` fields.
+ * @returns Nothing. The function updates browser storage as a side effect.
+ *
+ * @example
+ * saveConversion({
+ *   from: 'USD',
+ *   to: 'EUR',
+ *   amount: 10,
+ *   result: 9,
+ *   rate: 0.9,
+ * })
+ */
 export function saveConversion(conversion: Omit<ConversionHistory, 'id' | 'timestamp'>): void {
   if (typeof window === 'undefined') return
   const history = getConversionHistory()
@@ -33,13 +57,29 @@ export function saveConversion(conversion: Omit<ConversionHistory, 'id' | 'times
   localStorage.setItem(STORAGE_KEY, JSON.stringify(limited))
 }
 
-// Clear all conversion history
+/**
+ * Removes all stored conversion history entries from localStorage.
+ *
+ * @returns Nothing. The function clears browser storage as a side effect.
+ *
+ * @example
+ * clearConversionHistory()
+ */
 export function clearConversionHistory(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem(STORAGE_KEY)
 }
 
-// Get URL query parameters
+/**
+ * Extracts converter query parameters from the current browser URL.
+ *
+ * @returns Object containing optional `from`, `to`, and `amount` values.
+ *
+ * @example
+ * // URL: /?from=USD&to=EUR&amount=10
+ * getUrlParams()
+ * // { from: 'USD', to: 'EUR', amount: '10' }
+ */
 export function getUrlParams(): { from?: string; to?: string; amount?: string } {
   if (typeof window === 'undefined') return {}
   const urlParams = new URLSearchParams(window.location.search)
@@ -50,7 +90,18 @@ export function getUrlParams(): { from?: string; to?: string; amount?: string } 
   }
 }
 
-// Update URL query parameters
+/**
+ * Updates the current URL query string with converter state without reloading the page.
+ *
+ * @param from - Source currency code.
+ * @param to - Target currency code.
+ * @param amount - Amount string as entered by the user.
+ * @returns Nothing. The function calls `window.history.replaceState`.
+ *
+ * @example
+ * updateUrlParams('USD', 'EUR', '10')
+ * // URL becomes ...?from=USD&to=EUR&amount=10
+ */
 export function updateUrlParams(from: string, to: string, amount: string): void {
   if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
