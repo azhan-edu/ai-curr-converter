@@ -1,0 +1,5 @@
+# All files require approval from me
+* @azhan-eduhow
+
+# Optionally protect the CODEOWNERS file itself
+/.github/CODEOWNERS @azhan-eduhow
