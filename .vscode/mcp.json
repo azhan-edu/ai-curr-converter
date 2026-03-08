@@ -8,6 +8,13 @@
 			],
 			"gallery": "https://api.mcp.github.com",
 			"version": "0.0.1-seed"
+		},
+		"Prisma-Remote": {
+			"command": "npx",
+			"args": ["-y", "mcp-remote", "https://mcp.prisma.io/mcp"],
+			"env": {
+				"NODE_TLS_REJECT_UNAUTHORIZED": "0"
+			}
 		}
 	},
 	"inputs": []

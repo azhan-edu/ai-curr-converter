@@ -3,12 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import CurrencyConverter from './page'
-import { saveConversion } from '@/utils/storage'
 
 jest.mock('@/utils/storage', () => ({
-  getConversionHistory: jest.fn(() => []),
-  saveConversion: jest.fn(),
-  clearConversionHistory: jest.fn(),
   getUrlParams: jest.fn(() => ({})),
   updateUrlParams: jest.fn(),
 }))
@@ -16,17 +12,43 @@ jest.mock('@/utils/storage', () => ({
 describe('CurrencyConverter currency selection behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    process.env.NEXT_PUBLIC_CONVERSION_INPUT_DEBOUNCE_MS = '0'
 
-    global.fetch = jest.fn().mockResolvedValue({
-      json: async () => ({
-        success: true,
-        date: '2026-02-28',
-        rates: {
-          USD: 1,
-          EUR: 0.92,
-          GBP: 0.8,
-        },
-      }),
+    global.fetch = jest.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+
+      if (url.includes('/api/rates')) {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            date: '2026-02-28',
+            rates: {
+              USD: 1,
+              EUR: 0.92,
+              GBP: 0.8,
+            },
+          }),
+        })
+      }
+
+      if (url.includes('/api/conversions') && init?.method === 'POST') {
+        return Promise.resolve({
+          json: async () => ({ success: true }),
+        })
+      }
+
+      if (url.includes('/api/conversions') && init?.method === 'DELETE') {
+        return Promise.resolve({
+          json: async () => ({ success: true }),
+        })
+      }
+
+      return Promise.resolve({
+        json: async () => ({
+          success: true,
+          data: [],
+        }),
+      })
     }) as jest.Mock
   })
 
@@ -152,10 +174,32 @@ describe('CurrencyConverter currency selection behavior', () => {
 
   it('updates rates on refresh and does not write conversion history again', async () => {
     const user = userEvent.setup()
-    const saveConversionMock = saveConversion as jest.Mock
+    let createHistoryCalls = 0
 
-    global.fetch = jest.fn().mockImplementation((input: RequestInfo | URL) => {
+    global.fetch = jest.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+
+      if (url.includes('/api/conversions') && init?.method === 'POST') {
+        createHistoryCalls += 1
+        return Promise.resolve({
+          json: async () => ({ success: true }),
+        })
+      }
+
+      if (url.includes('/api/conversions') && init?.method === 'DELETE') {
+        return Promise.resolve({
+          json: async () => ({ success: true }),
+        })
+      }
+
+      if (url.includes('/api/conversions')) {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: [],
+          }),
+        })
+      }
 
       if (url.includes('refresh=1')) {
         return Promise.resolve({
@@ -191,7 +235,7 @@ describe('CurrencyConverter currency selection behavior', () => {
       expect(screen.getByText('1 USD = 0.9200 EUR')).toBeInTheDocument()
     })
 
-    const callsBeforeRefresh = saveConversionMock.mock.calls.length
+    const callsBeforeRefresh = createHistoryCalls
     expect(callsBeforeRefresh).toBeGreaterThan(0)
 
     await user.click(screen.getByRole('button', { name: 'Refresh Rates' }))
@@ -201,7 +245,7 @@ describe('CurrencyConverter currency selection behavior', () => {
     })
 
     expect(screen.getByText('1 USD = 0.9500 EUR')).toBeInTheDocument()
-    expect(saveConversionMock).toHaveBeenCalledTimes(callsBeforeRefresh)
+    expect(createHistoryCalls).toBe(callsBeforeRefresh)
   })
 
   it('shows failure notification and keeps previous successful rate when refresh fails', async () => {
