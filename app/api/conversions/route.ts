@@ -60,7 +60,19 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     )
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+
+    if (message.includes('P2021') || message.includes('table') || message.includes('does not exist')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Database is not ready. Run Prisma migrations and try again.',
+        },
+        { status: 500 }
+      )
+    }
+
     return NextResponse.json(
       {
         success: false,
