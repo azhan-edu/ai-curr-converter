@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ExchangeRate, ConversionHistory as ConversionHistoryEntry, RatesApiResponse } from '@/types'
 import { convertCurrency, validateAmount } from '@/utils/currency'
-import { getConversionHistory, saveConversion, clearConversionHistory, getUrlParams, updateUrlParams } from '@/utils/storage'
+import { getUrlParams, updateUrlParams } from '@/utils/storage'
 
 type NotificationState = {
   type: 'success' | 'error'
@@ -26,6 +26,38 @@ export default function useCurrencyConverter() {
   const [notification, setNotification] = useState<NotificationState | null>(null)
   const suppressNextHistorySaveRef = useRef(false)
 
+  const loadHistory = useCallback(async () => {
+    try {
+      const response = await fetch('/api/conversions')
+      const data = await response.json()
+
+      if (data.success && Array.isArray(data.data)) {
+        const parsedHistory: ConversionHistoryEntry[] = data.data.map((item: ConversionHistoryEntry) => ({
+          ...item,
+          timestamp: new Date(item.timestamp),
+        }))
+        setHistory(parsedHistory)
+      }
+    } catch {
+      setHistory([])
+    }
+  }, [])
+
+  const createHistoryEntry = useCallback(async (entry: Omit<ConversionHistoryEntry, 'id' | 'timestamp'>) => {
+    try {
+      await fetch('/api/conversions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(entry),
+      })
+      await loadHistory()
+    } catch {
+      // Ignore history write failures to keep conversion UX responsive.
+    }
+  }, [loadHistory])
+
   useEffect(() => {
     const params = getUrlParams()
     if (params.from) setFromCurrency(params.from)
@@ -34,8 +66,8 @@ export default function useCurrencyConverter() {
   }, [])
 
   useEffect(() => {
-    setHistory(getConversionHistory())
-  }, [])
+    loadHistory()
+  }, [loadHistory])
 
   const fetchRates = useCallback(async (options?: { forceRefresh?: boolean; showNotification?: boolean }) => {
     const forceRefresh = options?.forceRefresh ?? false
@@ -102,14 +134,13 @@ export default function useCurrencyConverter() {
     }
 
     if (shouldSaveHistory && !skipHistorySave) {
-      saveConversion({
+      void createHistoryEntry({
         from: fromCurrency,
         to: toCurrency,
         amount: numAmount,
         result: converted,
         rate: rates[toCurrency] / rates[fromCurrency],
       })
-      setHistory(getConversionHistory())
     }
 
     updateUrlParams(fromCurrency, toCurrency, amount)
@@ -165,8 +196,16 @@ export default function useCurrencyConverter() {
   }, [fromCurrency, toCurrency, isRefreshing])
 
   const handleClearHistory = useCallback(() => {
-    clearConversionHistory()
-    setHistory([])
+    void (async () => {
+      try {
+        await fetch('/api/conversions', {
+          method: 'DELETE',
+        })
+        setHistory([])
+      } catch {
+        // Ignore clear failures and keep current UI state.
+      }
+    })()
   }, [])
 
   const handleReloadConversion = useCallback((conversion: ConversionHistoryEntry) => {

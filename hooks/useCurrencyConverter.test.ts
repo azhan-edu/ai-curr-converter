@@ -2,12 +2,9 @@ import '@testing-library/jest-dom'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 import useCurrencyConverter from './useCurrencyConverter'
-import { saveConversion, updateUrlParams } from '@/utils/storage'
+import { updateUrlParams } from '@/utils/storage'
 
 jest.mock('@/utils/storage', () => ({
-  getConversionHistory: jest.fn(() => []),
-  saveConversion: jest.fn(),
-  clearConversionHistory: jest.fn(),
   getUrlParams: jest.fn(() => ({})),
   updateUrlParams: jest.fn(),
 }))
@@ -19,14 +16,46 @@ describe('useCurrencyConverter', () => {
     global.fetch = jest.fn().mockResolvedValue({
       json: async () => ({
         success: true,
-        date: '2026-02-28',
-        rates: {
-          USD: 1,
-          EUR: 0.92,
-          GBP: 0.8,
-        },
+        data: [],
       }),
     }) as jest.Mock
+
+    ;(global.fetch as jest.Mock).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+
+      if (url.includes('/api/rates')) {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            date: '2026-02-28',
+            rates: {
+              USD: 1,
+              EUR: 0.92,
+              GBP: 0.8,
+            },
+          }),
+        })
+      }
+
+      if (url.includes('/api/conversions') && init?.method === 'POST') {
+        return Promise.resolve({
+          json: async () => ({ success: true }),
+        })
+      }
+
+      if (url.includes('/api/conversions') && init?.method === 'DELETE') {
+        return Promise.resolve({
+          json: async () => ({ success: true }),
+        })
+      }
+
+      return Promise.resolve({
+        json: async () => ({
+          success: true,
+          data: [],
+        }),
+      })
+    })
   })
 
   it('updates URL params after a valid conversion', async () => {
@@ -44,10 +73,26 @@ describe('useCurrencyConverter', () => {
   })
 
   it('refreshes rates and skips writing conversion history during refresh-triggered recompute', async () => {
-    const saveConversionMock = saveConversion as jest.Mock
+    let createHistoryCalls = 0
 
-    global.fetch = jest.fn().mockImplementation((input: RequestInfo | URL) => {
+    ;(global.fetch as jest.Mock).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+
+      if (url.includes('/api/conversions') && init?.method === 'POST') {
+        createHistoryCalls += 1
+        return Promise.resolve({
+          json: async () => ({ success: true }),
+        })
+      }
+
+      if (url.includes('/api/conversions')) {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: [],
+          }),
+        })
+      }
 
       if (url.includes('refresh=1')) {
         return Promise.resolve({
@@ -86,7 +131,7 @@ describe('useCurrencyConverter', () => {
       expect(result.current.result).toBeCloseTo(9.2)
     })
 
-    const callsBeforeRefresh = saveConversionMock.mock.calls.length
+    const callsBeforeRefresh = createHistoryCalls
     expect(callsBeforeRefresh).toBeGreaterThan(0)
 
     await act(async () => {
@@ -98,6 +143,6 @@ describe('useCurrencyConverter', () => {
       expect(result.current.result).toBeCloseTo(9.5)
     })
 
-    expect(saveConversionMock).toHaveBeenCalledTimes(callsBeforeRefresh)
+    expect(createHistoryCalls).toBe(callsBeforeRefresh)
   })
 })
