@@ -24,6 +24,8 @@ const createConversionHistoryInputSchema = z.object({
   rate: z.number().finite().gt(0),
 })
 
+const conversionHistoryIdSchema = z.string().min(1)
+
 function normalizeListLimit(limit: number): number {
   if (!Number.isFinite(limit) || limit <= 0) {
     return DEFAULT_LIST_LIMIT
@@ -73,6 +75,73 @@ export async function createConversionHistory(
   })
 
   return mapDbRecordToConversionHistory(row)
+}
+
+export async function getConversionHistoryById(id: string): Promise<AppConversionHistory | null> {
+  const parsedId = conversionHistoryIdSchema.safeParse(id)
+
+  if (!parsedId.success) {
+    throw new Error('Invalid conversion history id')
+  }
+
+  const row = await prisma.conversionHistory.findUnique({
+    where: { id: parsedId.data },
+  })
+
+  if (!row) {
+    return null
+  }
+
+  return mapDbRecordToConversionHistory(row)
+}
+
+export async function updateConversionHistory(
+  id: string,
+  input: Omit<AppConversionHistory, 'id' | 'timestamp'>
+): Promise<AppConversionHistory> {
+  const parsedId = conversionHistoryIdSchema.safeParse(id)
+  const parsedInput = createConversionHistoryInputSchema.safeParse(input)
+
+  if (!parsedId.success) {
+    throw new Error('Invalid conversion history id')
+  }
+
+  if (!parsedInput.success) {
+    throw new Error('Invalid conversion history input')
+  }
+
+  try {
+    const row = await prisma.conversionHistory.update({
+      where: { id: parsedId.data },
+      data: {
+        fromCurrency: parsedInput.data.from,
+        toCurrency: parsedInput.data.to,
+        amount: parsedInput.data.amount,
+        result: parsedInput.data.result,
+        rate: parsedInput.data.rate,
+      },
+    })
+
+    return mapDbRecordToConversionHistory(row)
+  } catch {
+    throw new Error('Conversion history not found')
+  }
+}
+
+export async function deleteConversionHistoryById(id: string): Promise<void> {
+  const parsedId = conversionHistoryIdSchema.safeParse(id)
+
+  if (!parsedId.success) {
+    throw new Error('Invalid conversion history id')
+  }
+
+  try {
+    await prisma.conversionHistory.delete({
+      where: { id: parsedId.data },
+    })
+  } catch {
+    throw new Error('Conversion history not found')
+  }
 }
 
 export async function clearConversionHistory(): Promise<void> {
