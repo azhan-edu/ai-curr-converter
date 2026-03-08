@@ -62,5 +62,13 @@ test.describe('Currency conversion flow', () => {
         - heading "Currency Converter" [level=1]
       `)
     })
+
+    await test.step('Verify footer copyright notice', async () => {
+      const currentYear = new Date().getFullYear()
+      const footer = page.getByRole('contentinfo')
+      await expect(footer).toContainText(
+        `© ${currentYear} GoWell Technologies. All rights reserved.`
+      )
+    })
   })
 })
