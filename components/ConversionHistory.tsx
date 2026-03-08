@@ -24,16 +24,16 @@ export default function ConversionHistory({ history, onClear, onReload }: Histor
         </button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2" role="list" aria-label="Conversion history entries">
         {history.map((item) => (
-          <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+          <div key={item.id} role="listitem" className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
             <div className="flex-1">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-700">
                 {formatCurrency(item.amount, item.from)} → {formatCurrency(item.result, item.to)}
               </div>
-              <div className="text-xs text-gray-500">
+              <time className="text-sm text-gray-700" dateTime={item.timestamp.toISOString()}>
                 {item.timestamp.toLocaleString()}
-              </div>
+              </time>
             </div>
             <button
               onClick={() => onReload(item)}

@@ -64,7 +64,7 @@ export default function CurrencyRatesPanel({
       </div>
 
       <details className="mt-4 bg-white border border-gray-200 rounded-md">
-        <summary className="px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer">
+        <summary className="px-3 py-2 text-sm font-medium text-gray-800 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
           Rates Details
         </summary>
 
