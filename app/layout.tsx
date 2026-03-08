@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import AppFooter from '@/components/AppFooter'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -14,8 +15,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const currentYear = new Date().getFullYear()
-
   return (
     <html lang="en">
       <body className={inter.className}>
@@ -23,9 +22,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         {children}
-        <footer className="text-center text-sm text-gray-500 py-4 px-4">
-          &copy; {currentYear} GoWell Technologies. All rights reserved.
-        </footer>
+        <AppFooter />
       </body>
     </html>
   )
