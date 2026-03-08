@@ -83,4 +83,58 @@ describe('GET /api/rates cache and refresh behavior', () => {
     expect(body.rates).toBeDefined()
     expect(body.warning).toBe('Using cached fallback rates. Live rates are unavailable.')
   })
+
+  it('rejects payloads with invalid currency codes and falls back safely', async () => {
+    process.env.RATES_CACHE_TTL_SECONDS = '0'
+
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        base: 'USD',
+        date: '2026-02-28',
+        rates: {
+          usd: 1,
+          EUR: 0.92,
+        },
+      }),
+    } as Response)
+
+    const { GET } = await import('./route')
+    const response = await GET({ nextUrl: new URL('http://localhost/api/rates') } as never)
+    const body = await response.json()
+
+    expect(body.success).toBe(true)
+    expect(body.isFallback).toBe(true)
+    expect(body.warning).toBe('Using cached fallback rates. Live rates are unavailable.')
+    expect(body.rates.usd).toBeUndefined()
+  })
+
+  it('rejects payloads with invalid numeric rates and falls back safely', async () => {
+    process.env.RATES_CACHE_TTL_SECONDS = '0'
+
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        base: 'USD',
+        date: '2026-02-28',
+        rates: {
+          EUR: 0,
+          GBP: 0.8,
+        },
+      }),
+    } as Response)
+
+    const { GET } = await import('./route')
+    const response = await GET({ nextUrl: new URL('http://localhost/api/rates') } as never)
+    const body = await response.json()
+
+    expect(body.success).toBe(true)
+    expect(body.isFallback).toBe(true)
+    expect(body.warning).toBe('Using cached fallback rates. Live rates are unavailable.')
+    expect(body.rates.EUR).toBe(0.92)
+  })
 })

@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { NormalizedRatesPayload, validateNormalizedRatesPayload } from '@/utils/ratesValidation'
+
+type CachedRatesPayload = NormalizedRatesPayload & {
+  isFallback?: boolean
+  warning?: string
+}
 
 const API_SOURCES = [
   // Primary source - frankfurter.app (most reliable)
@@ -45,7 +51,7 @@ const FALLBACK_RATES: { [key: string]: number } = {
   PLN: 3.70,
 }
 
-let cachedRates: any = null
+let cachedRates: CachedRatesPayload | null = null
 let cacheTime: number = 0
 
 function getCacheDurationMs(): number {
@@ -86,7 +92,66 @@ async function fetchFromSource(url: string): Promise<any> {
   }
 }
 
-async function getExchangeRates(forceRefresh: boolean = false): Promise<any> {
+function normalizeExternalRatesPayload(source: string, data: unknown): NormalizedRatesPayload {
+  let rates: unknown
+  let base: unknown
+
+  if (source.includes('frankfurter.app') && typeof data === 'object' && data !== null) {
+    const payload = data as { rates?: unknown; base?: unknown; date?: unknown }
+    rates = payload.rates
+    base = payload.base ?? 'USD'
+  } else if (typeof data === 'object' && data !== null) {
+    const payload = data as {
+      rates?: unknown
+      conversion_rates?: unknown
+      usd?: unknown
+      base?: unknown
+      base_code?: unknown
+      date?: unknown
+    }
+
+    if (payload.rates && !payload.conversion_rates && !payload.usd) {
+      rates = payload.rates
+      base = payload.base ?? 'USD'
+    } else if (payload.conversion_rates) {
+      rates = payload.conversion_rates
+      base = payload.base_code ?? 'USD'
+    } else if (payload.usd) {
+      rates = payload.usd
+      base = 'USD'
+    }
+  }
+
+  if (!rates || typeof rates !== 'object' || Array.isArray(rates)) {
+    throw new Error('Invalid response format')
+  }
+
+  const normalizedBase = typeof base === 'string' ? base.toUpperCase() : 'USD'
+  const normalizedDate =
+    typeof (data as { date?: unknown })?.date === 'string' && (data as { date?: string }).date
+      ? (data as { date: string }).date
+      : new Date().toISOString().split('T')[0]
+
+  const normalizedRates = { ...(rates as Record<string, unknown>) }
+  if (!(normalizedBase in normalizedRates)) {
+    normalizedRates[normalizedBase] = 1.0
+  }
+
+  const validationResult = validateNormalizedRatesPayload({
+    rates: normalizedRates,
+    base: normalizedBase,
+    date: normalizedDate,
+    source,
+  })
+
+  if (!validationResult.success) {
+    throw new Error(`Invalid rates payload: ${validationResult.error}`)
+  }
+
+  return validationResult.data
+}
+
+async function getExchangeRates(forceRefresh: boolean = false): Promise<CachedRatesPayload> {
   const now = Date.now()
   const cacheDuration = getCacheDurationMs()
   const shouldBypassCache = forceRefresh || cacheDuration === 0
@@ -101,55 +166,22 @@ async function getExchangeRates(forceRefresh: boolean = false): Promise<any> {
   for (const source of API_SOURCES) {
     try {
       const data = await fetchFromSource(source)
-      let rates: any
-      let base: string
-      
-      // Handle different API response formats
-      if (source.includes('frankfurter.app')) {
-        // frankfurter.app format - has rate object directly
-        rates = data.rates
-        base = data.base || 'USD'
-        console.log(`!!![API] frankfurter.app data:`, data)
-      } else if (data.rates && !data.conversion_rates && !data.usd) {
-        // exchangerate.host format
-        rates = data.rates
-        base = data.base || 'USD'
-      } else if (data.conversion_rates) {
-        // exchangerate-api.com format
-        rates = data.conversion_rates
-        base = data.base_code || 'USD'
-      } else if (data.usd) {
-        // jsdelivr/fawazahmed0 currency-api format
-        rates = data.usd
-        base = 'USD'
-      } else {
-        console.warn(`[API] Unknown response format from ${source}`)
-        throw new Error('Invalid response format')
-      }
-
-      // Ensure base currency is included in rates with value of 1.0
-      if (!rates[base]) {
-        rates = { ...rates, [base]: 1.0 }
-      }
+      const normalizedPayload = normalizeExternalRatesPayload(source, data)
 
       console.log(`[API] Successfully obtained rates from ${source}`)
-      cachedRates = { 
-        rates, 
-        base, 
-        date: data.date || new Date().toISOString().split('T')[0],
-        source: source,
-      }
+      cachedRates = normalizedPayload
       cacheTime = now
       return cachedRates
     } catch (error) {
-      console.log(`[API] Source ${source} failed, trying next...`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.log(`[API] Source ${source} failed, trying next... (${errorMessage})`)
       continue
     }
   }
 
   // Use fallback rates when all external APIs fail
   console.error('[API] All external API sources failed, using fallback rates')
-  cachedRates = { 
+  cachedRates = {
     rates: FALLBACK_RATES, 
     base: 'USD', 
     date: new Date().toISOString().split('T')[0],

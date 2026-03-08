@@ -1,201 +1,38 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { ExchangeRate, ConversionHistory as ConversionHistoryEntry, RatesApiResponse } from '@/types'
-import { CURRENCIES, convertCurrency, validateAmount } from '@/utils/currency'
-import { getConversionHistory, saveConversion, clearConversionHistory, getUrlParams, updateUrlParams } from '@/utils/storage'
+import { CURRENCIES } from '@/utils/currency'
 import CurrencyInput from '@/components/CurrencyInput'
 import CurrencySelect from '@/components/CurrencySelect'
 import SwapButton from '@/components/SwapButton'
 import ConversionResult from '@/components/ConversionResult'
 import ConversionHistory from '@/components/ConversionHistory'
 import CurrencyRatesPanel from '@/components/CurrencyRatesPanel'
-
-type NotificationState = {
-  type: 'success' | 'error'
-  message: string
-}
+import useCurrencyConverter from '@/hooks/useCurrencyConverter'
 
 export default function CurrencyConverter() {
-  const [amount, setAmount] = useState('')
-  const [fromCurrency, setFromCurrency] = useState('USD')
-  const [toCurrency, setToCurrency] = useState('EUR')
-  const [rates, setRates] = useState<ExchangeRate | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState('')
-  const [result, setResult] = useState<number | null>(null)
-  const [history, setHistory] = useState<ConversionHistoryEntry[]>([])
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
-  const [ratesSourceUrl, setRatesSourceUrl] = useState<string | null>(null)
-  const [ratesBaseCurrency, setRatesBaseCurrency] = useState<string | null>(null)
-  const [notification, setNotification] = useState<NotificationState | null>(null)
-  const suppressNextHistorySaveRef = useRef(false)
-
-  // Load URL params on mount
-  useEffect(() => {
-    const params = getUrlParams()
-    if (params.from) setFromCurrency(params.from)
-    if (params.to) setToCurrency(params.to)
-    if (params.amount) setAmount(params.amount)
-  }, [])
-
-  // Load history
-  useEffect(() => {
-    setHistory(getConversionHistory())
-  }, [])
-
-  // Fetch rates
-  const fetchRates = useCallback(async (options?: { forceRefresh?: boolean; showNotification?: boolean }) => {
-    const forceRefresh = options?.forceRefresh ?? false
-    const showNotification = options?.showNotification ?? false
-
-    try {
-      if (forceRefresh) {
-        setIsRefreshing(true)
-      } else {
-        setLoading(true)
-      }
-
-      setError('')
-      const endpoint = forceRefresh ? '/api/rates?refresh=1' : '/api/rates'
-      const response = await fetch(endpoint)
-      const data: RatesApiResponse = await response.json()
-
-      if (data.success && data.rates) {
-        if (forceRefresh) {
-          suppressNextHistorySaveRef.current = true
-        }
-
-        setRates(data.rates)
-        setLastUpdated(data.date ?? null)
-        setRatesSourceUrl(data.source ?? null)
-        setRatesBaseCurrency(data.base ?? null)
-
-        if (forceRefresh && showNotification) {
-          setNotification({ type: 'success', message: 'Currency rates are refreshed' })
-        }
-      } else {
-        throw new Error(data.error || 'Failed to fetch rates')
-      }
-    } catch (err) {
-      if (forceRefresh) {
-        setNotification({ type: 'error', message: 'Currency rates refresh failed.' })
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to fetch exchange rates')
-      }
-    } finally {
-      setLoading(false)
-      setIsRefreshing(false)
-    }
-  }, [setLoading, setError, setRates, setLastUpdated, setRatesSourceUrl, setRatesBaseCurrency, setIsRefreshing, setNotification])
-
-  // Convert currency
-  const performConversion = useCallback((shouldSaveHistory: boolean = true) => {
-    if (!rates || !amount) return
-
-    const validation = validateAmount(amount)
-    if (!validation.isValid) {
-      setError(validation.error!)
-      setResult(null)
-      return
-    }
-
-    const numAmount = parseFloat(amount)
-    const converted = convertCurrency(numAmount, fromCurrency, toCurrency, rates)
-    setResult(converted)
-    setError('')
-
-    const skipHistorySave = suppressNextHistorySaveRef.current
-    if (skipHistorySave) {
-      suppressNextHistorySaveRef.current = false
-    }
-
-    if (shouldSaveHistory && !skipHistorySave) {
-      saveConversion({
-        from: fromCurrency,
-        to: toCurrency,
-        amount: numAmount,
-        result: converted,
-        rate: rates[toCurrency] / rates[fromCurrency],
-      })
-      setHistory(getConversionHistory())
-    }
-
-    // Update URL
-    updateUrlParams(fromCurrency, toCurrency, amount)
-  }, [amount, fromCurrency, toCurrency, rates])
-
-  // Auto convert when inputs change
-  useEffect(() => {
-    if (rates && amount) {
-      performConversion()
-    } else {
-      setResult(null)
-    }
-  }, [amount, fromCurrency, toCurrency, rates, performConversion])
-
-  // Fetch rates on mount
-  useEffect(() => {
-    fetchRates()
-  }, [fetchRates])
-
-  useEffect(() => {
-    if (!notification) return
-
-    const timeoutId = setTimeout(() => {
-      setNotification(null)
-    }, 3000)
-
-    return () => clearTimeout(timeoutId)
-  }, [notification])
-
-  // Swap currencies
-  const handleSwap = () => {
-    if (isRefreshing) return
-
-    setFromCurrency(toCurrency)
-    setToCurrency(fromCurrency)
-  }
-
-  const handleFromCurrencyChange = (nextFromCurrency: string) => {
-    if (isRefreshing) return
-
-    if (nextFromCurrency === toCurrency) {
-      setToCurrency(fromCurrency)
-    }
-
-    setFromCurrency(nextFromCurrency)
-  }
-
-  const handleToCurrencyChange = (nextToCurrency: string) => {
-    if (isRefreshing) return
-
-    if (nextToCurrency === fromCurrency) {
-      setFromCurrency(toCurrency)
-    }
-
-    setToCurrency(nextToCurrency)
-  }
-
-  // Clear history
-  const handleClearHistory = () => {
-    clearConversionHistory()
-    setHistory([])
-  }
-
-  // Reload conversion from history
-  const handleReloadConversion = (conversion: ConversionHistoryEntry) => {
-    setAmount(conversion.amount.toString())
-    setFromCurrency(conversion.from)
-    setToCurrency(conversion.to)
-  }
-
-  const handleRefreshRates = async () => {
-    await fetchRates({ forceRefresh: true, showNotification: true })
-  }
-
-  const hasPositiveAmount = Number.isFinite(Number(amount)) && Number(amount) > 0
+  const {
+    amount,
+    setAmount,
+    fromCurrency,
+    toCurrency,
+    rates,
+    loading,
+    isRefreshing,
+    error,
+    result,
+    history,
+    lastUpdated,
+    ratesSourceUrl,
+    ratesBaseCurrency,
+    notification,
+    hasPositiveAmount,
+    handleSwap,
+    handleFromCurrencyChange,
+    handleToCurrencyChange,
+    handleClearHistory,
+    handleReloadConversion,
+    handleRefreshRates,
+  } = useCurrencyConverter()
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
