@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { ExchangeRate, ConversionHistory as ConversionHistoryEntry, RatesApiResponse } from '@/types'
 import { convertCurrency, validateAmount } from '@/utils/currency'
 import { getUrlParams, updateUrlParams } from '@/utils/storage'
+import { emitConversionHistoryUpdated } from '@/utils/conversionHistoryEvents'
 
 type NotificationState = {
   type: 'success' | 'error'
@@ -19,44 +20,29 @@ export default function useCurrencyConverter() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<number | null>(null)
-  const [history, setHistory] = useState<ConversionHistoryEntry[]>([])
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const [ratesSourceUrl, setRatesSourceUrl] = useState<string | null>(null)
   const [ratesBaseCurrency, setRatesBaseCurrency] = useState<string | null>(null)
   const [notification, setNotification] = useState<NotificationState | null>(null)
   const suppressNextHistorySaveRef = useRef(false)
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const response = await fetch('/api/conversions')
-      const data = await response.json()
-
-      if (data.success && Array.isArray(data.data)) {
-        const parsedHistory: ConversionHistoryEntry[] = data.data.map((item: ConversionHistoryEntry) => ({
-          ...item,
-          timestamp: new Date(item.timestamp),
-        }))
-        setHistory(parsedHistory)
-      }
-    } catch {
-      setHistory([])
-    }
-  }, [])
-
   const createHistoryEntry = useCallback(async (entry: Omit<ConversionHistoryEntry, 'id' | 'timestamp'>) => {
     try {
-      await fetch('/api/conversions', {
+      const response = await fetch('/api/conversions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(entry),
       })
-      await loadHistory()
+
+      if (response.ok) {
+        emitConversionHistoryUpdated()
+      }
     } catch {
       // Ignore history write failures to keep conversion UX responsive.
     }
-  }, [loadHistory])
+  }, [])
 
   useEffect(() => {
     const params = getUrlParams()
@@ -64,10 +50,6 @@ export default function useCurrencyConverter() {
     if (params.to) setToCurrency(params.to)
     if (params.amount) setAmount(params.amount)
   }, [])
-
-  useEffect(() => {
-    loadHistory()
-  }, [loadHistory])
 
   const fetchRates = useCallback(async (options?: { forceRefresh?: boolean; showNotification?: boolean }) => {
     const forceRefresh = options?.forceRefresh ?? false
@@ -195,25 +177,6 @@ export default function useCurrencyConverter() {
     setToCurrency(nextToCurrency)
   }, [fromCurrency, toCurrency, isRefreshing])
 
-  const handleClearHistory = useCallback(() => {
-    void (async () => {
-      try {
-        await fetch('/api/conversions', {
-          method: 'DELETE',
-        })
-        setHistory([])
-      } catch {
-        // Ignore clear failures and keep current UI state.
-      }
-    })()
-  }, [])
-
-  const handleReloadConversion = useCallback((conversion: ConversionHistoryEntry) => {
-    setAmount(conversion.amount.toString())
-    setFromCurrency(conversion.from)
-    setToCurrency(conversion.to)
-  }, [])
-
   const handleRefreshRates = useCallback(async () => {
     await fetchRates({ forceRefresh: true, showNotification: true })
   }, [fetchRates])
@@ -230,7 +193,6 @@ export default function useCurrencyConverter() {
     isRefreshing,
     error,
     result,
-    history,
     lastUpdated,
     ratesSourceUrl,
     ratesBaseCurrency,
@@ -239,8 +201,6 @@ export default function useCurrencyConverter() {
     handleSwap,
     handleFromCurrencyChange,
     handleToCurrencyChange,
-    handleClearHistory,
-    handleReloadConversion,
     handleRefreshRates,
   }
 }

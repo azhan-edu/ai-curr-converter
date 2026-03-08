@@ -145,4 +145,5 @@ describe('useCurrencyConverter', () => {
 
     expect(createHistoryCalls).toBe(callsBeforeRefresh)
   })
+
 })

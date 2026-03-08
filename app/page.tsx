@@ -5,7 +5,7 @@ import CurrencyInput from '@/components/CurrencyInput'
 import CurrencySelect from '@/components/CurrencySelect'
 import SwapButton from '@/components/SwapButton'
 import ConversionResult from '@/components/ConversionResult'
-import ConversionHistory from '@/components/ConversionHistory'
+import ConversionHistoryPanel from '@/components/ConversionHistoryPanel'
 import CurrencyRatesPanel from '@/components/CurrencyRatesPanel'
 import useCurrencyConverter from '@/hooks/useCurrencyConverter'
 
@@ -20,7 +20,6 @@ export default function CurrencyConverter() {
     isRefreshing,
     error,
     result,
-    history,
     lastUpdated,
     ratesSourceUrl,
     ratesBaseCurrency,
@@ -29,8 +28,6 @@ export default function CurrencyConverter() {
     handleSwap,
     handleFromCurrencyChange,
     handleToCurrencyChange,
-    handleClearHistory,
-    handleReloadConversion,
     handleRefreshRates,
   } = useCurrencyConverter()
 
@@ -117,11 +114,7 @@ export default function CurrencyConverter() {
           )}
         </div>
 
-        <ConversionHistory
-          history={history}
-          onClear={handleClearHistory}
-          onReload={handleReloadConversion}
-        />
+        <ConversionHistoryPanel />
       </div>
     </div>
   )
