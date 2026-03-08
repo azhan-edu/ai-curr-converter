@@ -32,7 +32,7 @@ export default function CurrencyConverter() {
   } = useCurrencyConverter()
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-900">
           Currency Converter
@@ -99,8 +99,10 @@ export default function CurrencyConverter() {
           {notification && (
             <div
               role="status"
+              aria-live="polite"
+              aria-atomic="true"
               className={`fixed top-4 right-4 px-4 py-3 rounded-md shadow-md text-white ${
-                notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                notification.type === 'success' ? 'bg-green-700' : 'bg-red-700'
               }`}
             >
               {notification.message}
@@ -108,7 +110,7 @@ export default function CurrencyConverter() {
           )}
 
           {error && !loading && (
-            <div className="text-center text-red-600 mt-4">
+            <div role="alert" className="text-center text-red-700 mt-4">
               {error}
             </div>
           )}
@@ -116,6 +118,6 @@ export default function CurrencyConverter() {
 
         <ConversionHistoryPanel />
       </div>
-    </div>
+    </main>
   )
 }

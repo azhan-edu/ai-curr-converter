@@ -103,6 +103,14 @@ describe('CurrencyConverter currency selection behavior', () => {
     })
   })
 
+  it('renders a main landmark target for skip navigation', () => {
+    render(<CurrencyConverter />)
+
+    const main = screen.getByRole('main')
+    expect(main).toHaveAttribute('id', 'main-content')
+    expect(main).toHaveAttribute('tabindex', '-1')
+  })
+
   it('shows refresh button only when amount is greater than zero', async () => {
     const user = userEvent.setup()
     render(<CurrencyConverter />)
@@ -244,8 +252,30 @@ describe('CurrencyConverter currency selection behavior', () => {
       expect(screen.getByText('Currency rates are refreshed')).toBeInTheDocument()
     })
 
+    const successNotification = screen.getByRole('status')
+    expect(successNotification).toHaveAttribute('aria-live', 'polite')
+    expect(successNotification).toHaveAttribute('aria-atomic', 'true')
+
     expect(screen.getByText('1 USD = 0.9500 EUR')).toBeInTheDocument()
     expect(createHistoryCalls).toBe(callsBeforeRefresh)
+  })
+
+  it('announces rates fetch error using alert role', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      json: async () => ({
+        success: false,
+        error: 'fetch failed',
+      }),
+    }) as jest.Mock
+
+    render(<CurrencyConverter />)
+
+    await waitFor(() => {
+      const alerts = screen.getAllByRole('alert')
+      expect(alerts).toHaveLength(2)
+      expect(alerts[0]).toHaveTextContent('Failed to fetch exchange rates')
+      expect(alerts[1]).toHaveTextContent('Failed to fetch exchange rates')
+    })
   })
 
   it('shows failure notification and keeps previous successful rate when refresh fails', async () => {

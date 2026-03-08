@@ -181,15 +181,17 @@ async function getExchangeRates(forceRefresh: boolean = false): Promise<CachedRa
 
   // Use fallback rates when all external APIs fail
   console.error('[API] All external API sources failed, using fallback rates')
-  cachedRates = {
+  const fallbackPayload: CachedRatesPayload = {
     rates: FALLBACK_RATES, 
     base: 'USD', 
     date: new Date().toISOString().split('T')[0],
+    source: 'fallback',
     isFallback: true,
     warning: 'Using cached fallback rates. Live rates are unavailable.',
   }
+  cachedRates = fallbackPayload
   cacheTime = now
-  return cachedRates
+  return fallbackPayload
 }
 
 export async function GET(request: NextRequest) {

@@ -15,14 +15,15 @@ const updateConversionSchema = z.object({
 })
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(_: NextRequest, context: RouteContext) {
   try {
-    const history = await getConversionHistoryById(context.params.id)
+    const { id } = await context.params
+    const history = await getConversionHistoryById(id)
 
     if (!history) {
       return NextResponse.json(
@@ -61,6 +62,7 @@ export async function GET(_: NextRequest, context: RouteContext) {
 
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
+    const { id } = await context.params
     const body = await request.json()
     const parsedBody = updateConversionSchema.safeParse(body)
 
@@ -74,7 +76,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       )
     }
 
-    const updated = await updateConversionHistory(context.params.id, parsedBody.data)
+    const updated = await updateConversionHistory(id, parsedBody.data)
 
     return NextResponse.json({
       success: true,
@@ -113,7 +115,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_: NextRequest, context: RouteContext) {
   try {
-    await deleteConversionHistoryById(context.params.id)
+    const { id } = await context.params
+    await deleteConversionHistoryById(id)
 
     return NextResponse.json({
       success: true,

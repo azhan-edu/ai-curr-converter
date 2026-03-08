@@ -18,26 +18,26 @@ export default function ConversionHistory({ history, onClear, onReload }: Histor
         <h2 className="text-xl font-semibold text-gray-900">Conversion History</h2>
         <button
           onClick={onClear}
-          className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+          className="px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500"
         >
           Clear History
         </button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2" role="list" aria-label="Conversion history entries">
         {history.map((item) => (
-          <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+          <div key={item.id} role="listitem" className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
             <div className="flex-1">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-700">
                 {formatCurrency(item.amount, item.from)} → {formatCurrency(item.result, item.to)}
               </div>
-              <div className="text-xs text-gray-500">
+              <time className="text-sm text-gray-700" dateTime={item.timestamp.toISOString()}>
                 {item.timestamp.toLocaleString()}
-              </div>
+              </time>
             </div>
             <button
               onClick={() => onReload(item)}
-              className="ml-4 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="ml-4 px-3 py-1 bg-blue-700 text-white text-sm rounded hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Reload
             </button>

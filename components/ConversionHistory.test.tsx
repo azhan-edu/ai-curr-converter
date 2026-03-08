@@ -49,7 +49,9 @@ describe('ConversionHistory', () => {
     for (const entry of historyEntries) {
       const formatted = `${formatCurrency(entry.amount, entry.from)} → ${formatCurrency(entry.result, entry.to)}`
       expect(screen.getByText(formatted)).toBeInTheDocument()
-      expect(screen.getByText(entry.timestamp.toLocaleString())).toBeInTheDocument()
+      const time = screen.getByText(entry.timestamp.toLocaleString())
+      expect(time.tagName).toBe('TIME')
+      expect(time).toHaveAttribute('dateTime', entry.timestamp.toISOString())
     }
 
     expect(screen.getAllByRole('button', { name: /reload/i })).toHaveLength(historyEntries.length)

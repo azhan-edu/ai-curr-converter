@@ -114,4 +114,24 @@ describe('CurrencyRatesPanel', () => {
     expect(screen.getByRole('cell', { name: 'GBP' })).toBeInTheDocument()
     expect(screen.getByRole('cell', { name: '0.8' })).toBeInTheDocument()
   })
+
+  it('applies explicit focus-visible styling to details summary', () => {
+    const onRefresh = jest.fn()
+
+    render(
+      <CurrencyRatesPanel
+        lastUpdated="2026-02-28"
+        showRefreshButton={false}
+        isRefreshing={false}
+        onRefresh={onRefresh}
+        rates={null}
+        sourceUrl={null}
+        baseCurrency={null}
+      />
+    )
+
+    const summary = screen.getByText('Rates Details')
+    expect(summary).toHaveClass('focus-visible:ring-2')
+    expect(summary).toHaveClass('focus-visible:ring-blue-500')
+  })
 })
