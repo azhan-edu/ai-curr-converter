@@ -32,7 +32,7 @@ export default function CurrencyConverter() {
   } = useCurrencyConverter()
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-900">
           Currency Converter
@@ -118,6 +118,6 @@ export default function CurrencyConverter() {
 
         <ConversionHistoryPanel />
       </div>
-    </div>
+    </main>
   )
 }

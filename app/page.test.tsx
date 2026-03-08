@@ -103,6 +103,14 @@ describe('CurrencyConverter currency selection behavior', () => {
     })
   })
 
+  it('renders a main landmark target for skip navigation', () => {
+    render(<CurrencyConverter />)
+
+    const main = screen.getByRole('main')
+    expect(main).toHaveAttribute('id', 'main-content')
+    expect(main).toHaveAttribute('tabindex', '-1')
+  })
+
   it('shows refresh button only when amount is greater than zero', async () => {
     const user = userEvent.setup()
     render(<CurrencyConverter />)
