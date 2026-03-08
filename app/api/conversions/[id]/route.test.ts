@@ -15,6 +15,10 @@ describe('Conversion history item route', () => {
     jest.clearAllMocks()
   })
 
+  const createContext = (id: string) => ({
+    params: Promise.resolve({ id }),
+  })
+
   it('returns a conversion history entry by id', async () => {
     getConversionHistoryByIdMock.mockResolvedValue({
       id: 'entry-1',
@@ -27,7 +31,7 @@ describe('Conversion history item route', () => {
     })
 
     const { GET } = await import('./route')
-    const response = await GET({} as never, { params: { id: 'entry-1' } })
+    const response = await GET({} as never, createContext('entry-1'))
     const body = await response.json()
 
     expect(getConversionHistoryByIdMock).toHaveBeenCalledWith('entry-1')
@@ -39,7 +43,7 @@ describe('Conversion history item route', () => {
     getConversionHistoryByIdMock.mockResolvedValue(null)
 
     const { GET } = await import('./route')
-    const response = await GET({} as never, { params: { id: 'missing-id' } })
+    const response = await GET({} as never, createContext('missing-id'))
     const body = await response.json()
 
     expect(response.status).toBe(404)
@@ -68,7 +72,7 @@ describe('Conversion history item route', () => {
           rate: 0.8,
         }),
       } as never,
-      { params: { id: 'entry-1' } }
+      createContext('entry-1')
     )
     const body = await response.json()
 
@@ -95,7 +99,7 @@ describe('Conversion history item route', () => {
           rate: 0.8,
         }),
       } as never,
-      { params: { id: 'entry-1' } }
+      createContext('entry-1')
     )
     const body = await response.json()
 
@@ -108,7 +112,7 @@ describe('Conversion history item route', () => {
     deleteConversionHistoryByIdMock.mockResolvedValue(undefined)
 
     const { DELETE } = await import('./route')
-    const response = await DELETE({} as never, { params: { id: 'entry-1' } })
+    const response = await DELETE({} as never, createContext('entry-1'))
     const body = await response.json()
 
     expect(deleteConversionHistoryByIdMock).toHaveBeenCalledWith('entry-1')
@@ -120,7 +124,7 @@ describe('Conversion history item route', () => {
     deleteConversionHistoryByIdMock.mockRejectedValue(new Error('Conversion history not found'))
 
     const { DELETE } = await import('./route')
-    const response = await DELETE({} as never, { params: { id: 'missing-id' } })
+    const response = await DELETE({} as never, createContext('missing-id'))
     const body = await response.json()
 
     expect(response.status).toBe(404)
