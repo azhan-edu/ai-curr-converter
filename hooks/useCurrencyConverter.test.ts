@@ -12,6 +12,7 @@ jest.mock('@/utils/storage', () => ({
 describe('useCurrencyConverter', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    process.env.NEXT_PUBLIC_CONVERSION_INPUT_DEBOUNCE_MS = '0'
 
     global.fetch = jest.fn().mockResolvedValue({
       json: async () => ({

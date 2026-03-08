@@ -1,17 +1,38 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { ExchangeRate, ConversionHistory as ConversionHistoryEntry, RatesApiResponse } from '@/types'
 import { convertCurrency, validateAmount } from '@/utils/currency'
 import { getUrlParams, updateUrlParams } from '@/utils/storage'
 import { emitConversionHistoryUpdated } from '@/utils/conversionHistoryEvents'
+import debounce from 'lodash.debounce'
 
 type NotificationState = {
   type: 'success' | 'error'
   message: string
 }
 
+const DEFAULT_CONVERSION_DEBOUNCE_MS = 800
+
+function resolveConversionDebounceMs(): number {
+  const rawValue = process.env.NEXT_PUBLIC_CONVERSION_INPUT_DEBOUNCE_MS
+
+  if (!rawValue) {
+    return DEFAULT_CONVERSION_DEBOUNCE_MS
+  }
+
+  const parsed = Number(rawValue)
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return DEFAULT_CONVERSION_DEBOUNCE_MS
+  }
+
+  return Math.trunc(parsed)
+}
+
 export default function useCurrencyConverter() {
+  const conversionDebounceMs = resolveConversionDebounceMs()
+
   const [amount, setAmount] = useState('')
   const [fromCurrency, setFromCurrency] = useState('USD')
   const [toCurrency, setToCurrency] = useState('EUR')
@@ -95,17 +116,17 @@ export default function useCurrencyConverter() {
     }
   }, [])
 
-  const performConversion = useCallback((shouldSaveHistory: boolean = true) => {
-    if (!rates || !amount) return
+  const performConversion = useCallback((amountToConvert: string, shouldSaveHistory: boolean = true) => {
+    if (!rates || !amountToConvert) return
 
-    const validation = validateAmount(amount)
+    const validation = validateAmount(amountToConvert)
     if (!validation.isValid) {
       setError(validation.error ?? 'Invalid amount')
       setResult(null)
       return
     }
 
-    const numAmount = parseFloat(amount)
+    const numAmount = parseFloat(amountToConvert)
     const converted = convertCurrency(numAmount, fromCurrency, toCurrency, rates)
     setResult(converted)
     setError('')
@@ -125,16 +146,40 @@ export default function useCurrencyConverter() {
       })
     }
 
-    updateUrlParams(fromCurrency, toCurrency, amount)
-  }, [amount, fromCurrency, toCurrency, rates])
+    updateUrlParams(fromCurrency, toCurrency, amountToConvert)
+  }, [fromCurrency, toCurrency, rates])
+
+  const performConversionRef = useRef(performConversion)
 
   useEffect(() => {
-    if (rates && amount) {
-      performConversion()
-    } else {
+    performConversionRef.current = performConversion
+  }, [performConversion])
+
+  const debouncedPerformConversion = useMemo(
+    () =>
+      debounce((amountToConvert: string) => {
+        performConversionRef.current(amountToConvert)
+      }, conversionDebounceMs),
+    [conversionDebounceMs]
+  )
+
+  useEffect(() => {
+    if (!rates || !amount) {
       setResult(null)
+      return
     }
-  }, [amount, fromCurrency, toCurrency, rates, performConversion])
+
+    if (conversionDebounceMs === 0) {
+      performConversion(amount)
+      return
+    }
+
+    debouncedPerformConversion(amount)
+
+    return () => {
+      debouncedPerformConversion.cancel()
+    }
+  }, [amount, fromCurrency, toCurrency, rates, performConversion, debouncedPerformConversion, conversionDebounceMs])
 
   useEffect(() => {
     fetchRates()

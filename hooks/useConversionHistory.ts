@@ -39,7 +39,13 @@ export default function useConversionHistory() {
   }, [])
 
   useEffect(() => {
-    void loadHistory()
+    const timeoutId = setTimeout(() => {
+      void loadHistory()
+    }, 0)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
   }, [loadHistory])
 
   useEffect(() => {

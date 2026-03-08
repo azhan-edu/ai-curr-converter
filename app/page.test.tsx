@@ -12,6 +12,7 @@ jest.mock('@/utils/storage', () => ({
 describe('CurrencyConverter currency selection behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    process.env.NEXT_PUBLIC_CONVERSION_INPUT_DEBOUNCE_MS = '0'
 
     global.fetch = jest.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
