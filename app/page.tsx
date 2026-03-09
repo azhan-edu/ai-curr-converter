@@ -119,7 +119,7 @@ export default function CurrencyConverter() {
         <ConversionHistoryPanel />
 
         <footer className="mt-12 text-center text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} Godel Technologies. All rights reserved.</p>
+          <p suppressHydrationWarning>© {new Date().getFullYear()} Godel Technologies. All rights reserved.</p>
         </footer>
       </div>
     </main>
